@@ -12,3 +12,5 @@ Kevin Zhang k389zhan@uwaterloo.ca
 Steven Gao s38gao@uwaterloo.ca
 
 Our [team contract](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group7) includes details on how we will work together.
+
+Our [project proposal](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group-7-Project-Proposal) describes our product vision.
