@@ -1,16 +1,26 @@
 # CS346 Group 7
 
-Project Name
-Project details to be determined.
+## BiteShare
 
 Team 101-07
-We are a 4 person team.
 
-Brandon Lam b3lam@uwaterloo.ca
-Ruohan Jin r39jin@uwaterloo.ca
-Kevin Zhang k389zhan@uwaterloo.ca
-Steven Gao s38gao@uwaterloo.ca
+We are a four-person team.
 
-Our [team contract](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group7) includes details on how we will work together.
+---
 
-Our [project proposal](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group-7-Project-Proposal) describes our product vision.
+## Team Members
+
+- Brandon Lam — b3lam@uwaterloo.ca
+- Ruohan Jin — r39jin@uwaterloo.ca
+- Kevin Zhang — k389zhan@uwaterloo.ca
+- Steven Gao — s38gao@uwaterloo.ca
+
+---
+
+## Project Documents
+
+- [Team Contract](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group7)  
+  Includes details on how we will work together.
+
+- [Project Proposal](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group-7-Project-Proposal)  
+  Describes our product vision.
