@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import biteshare.composeapp.generated.resources.Res
 import biteshare.composeapp.generated.resources.welcome_screen_image
+import org.example.biteshare.components.LoginSignupButton
+import org.example.biteshare.components.WelcomeScreenImage
+import org.example.biteshare.components.TextButton
 
 @Preview
 @Composable
@@ -51,14 +54,7 @@ fun LoginScreen() {
     ) {
         Spacer(modifier = Modifier.height(30.dp))
 
-        Image(
-            painter = painterResource(Res.drawable.welcome_screen_image),
-            contentDescription = "Welcome screen image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(450.dp), // set how big it is
-            contentScale = ContentScale.Fit // this makes the image fill the area nicely
-        )
+        WelcomeScreenImage()
 
         Column(modifier = Modifier.padding(horizontal = 15.dp)) {
             Text(
@@ -127,16 +123,7 @@ fun LoginScreen() {
                 )
             }
 
-            Button(
-                onClick = { /* Add navigation here later */ },
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .padding(top = 20.dp),
-                shape = RoundedCornerShape(6.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7A00)) // fill it with orange
-            ) {
-                Text("Login", fontSize = 25.sp, fontWeight = FontWeight.Normal)
-            }
+            LoginSignupButton(text = "Login", onClick = { /* Add navigation here later */ })
 
             Spacer(modifier = Modifier.height(25.dp))
         }
@@ -152,16 +139,7 @@ fun LoginScreen() {
                 fontSize = 14.sp
             )
 
-            // Part 2: the clickable orange text
-            TextButton(
-                onClick = { /* We will navigate to the Sign Up screen here */},
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = "Sign Up",
-                    color = Color(0xFFFF8C00),
-                )
-            }
+            TextButton(text = "Sign Up", onClick = { /* We will navigate to the Sign Up screen here */ })
         }
 
     }

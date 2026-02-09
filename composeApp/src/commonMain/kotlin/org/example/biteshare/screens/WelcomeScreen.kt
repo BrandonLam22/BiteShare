@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import biteshare.composeapp.generated.resources.Res
 import biteshare.composeapp.generated.resources.welcome_screen_image
+import org.example.biteshare.components.LoginSignupButton
+import org.example.biteshare.components.WelcomeScreenImage
 
 @Preview
 @Composable
@@ -38,14 +40,7 @@ fun WelcomeScreen() {
     ) {
         Spacer(modifier = Modifier.height(35.dp))
 
-        Image(
-            painter = painterResource(Res.drawable.welcome_screen_image),
-            contentDescription = "Welcome screen image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(450.dp), // set how big it is
-            contentScale = ContentScale.Fit // this makes the image fill the area nicely
-        )
+        WelcomeScreenImage()
 
         Column(modifier = Modifier.padding(horizontal = 15.dp)) {
             Spacer(modifier = Modifier.height(32.dp))
@@ -64,14 +59,7 @@ fun WelcomeScreen() {
                 modifier = Modifier.padding(top = 8.dp, bottom = 32.dp) // Add space around it
             )
 
-            Button(
-                onClick = { /* Add navigation here later */},
-                modifier = Modifier.fillMaxWidth(0.9f),
-                shape = RoundedCornerShape(6.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7A00)) // fill it with orange
-            ) {
-                Text("Login", fontSize = 25.sp, fontWeight = FontWeight.Normal)
-            }
+            LoginSignupButton(text = "Login", onClick = { /* Add navigation here later */})
 
             Spacer(modifier = Modifier.height(16.dp)) // Adds a little gap between the buttons
 
