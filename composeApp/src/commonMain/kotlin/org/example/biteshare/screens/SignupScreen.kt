@@ -42,12 +42,12 @@ import biteshare.composeapp.generated.resources.welcome_screen_image
 
 @Preview
 @Composable
-fun LoginScreen() {
+fun SignupScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize() // take up the whole screen
             .background(Color.White), // set the background color to white
-        horizontalAlignment = Alignment.CenterHorizontally, // center the title and buttons
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(30.dp))
 
@@ -62,15 +62,16 @@ fun LoginScreen() {
 
         Column(modifier = Modifier.padding(horizontal = 15.dp)) {
             Text(
-                text = "Login",
+                text = "Sign Up",
                 color = Color(0xFFFF7A00), // Hex code for that orange color
                 fontSize = 35.sp, // 'sp' is for text sizing
                 fontWeight = FontWeight.Bold, // make it thick
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            var username by remember { mutableStateOf("") } // tells Compose to save this value in the phone's memory even when the UI refreshes
+            var username by remember { mutableStateOf("") }
             var password by remember { mutableStateOf("") }
+            var email by remember { mutableStateOf("") }
 
             OutlinedTextField(
                 value = username,
@@ -79,7 +80,7 @@ fun LoginScreen() {
                     Text(
                         text = "Username",
                         fontSize = 20.sp,
-                        color = Color.Gray,
+                        color = Color.Gray
                     )
                 },
                 singleLine = true,
@@ -99,14 +100,14 @@ fun LoginScreen() {
                     Text(
                         text = "Password",
                         fontSize = 20.sp,
-                        color = Color.Gray,
+                        color = Color.Gray
                     )
                 },
                 visualTransformation = PasswordVisualTransformation(), // hide the text
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(top = 10.dp)
+                    .padding(top = 5.dp)
                     .height(55.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFF7A00),
@@ -114,31 +115,39 @@ fun LoginScreen() {
                 )
             )
 
-            TextButton(
-                onClick = { /* add navigation to the "reset" screen later */ },
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = {
+                    Text(
+                        text = "Email",
+                        fontSize = 20.sp,
+                        color = Color.Gray
+                    )
+                },
+                visualTransformation = PasswordVisualTransformation(), // hide the text
+                singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth(0.9f) // keep it the same width as the input boxes
-                    .wrapContentWidth(Alignment.End), // push the button to the right
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = "forgot password",
-                    color = Color(0xFFFF8C00),
+                    .fillMaxWidth(0.9f)
+                    .padding(top = 5.dp)
+                    .height(55.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFFF7A00),
+                    unfocusedBorderColor = Color(0xFFFF8C00),
                 )
-            }
+            )
 
             Button(
                 onClick = { /* Add navigation here later */ },
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(top = 20.dp),
+                    .padding(top = 30.dp),
                 shape = RoundedCornerShape(6.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7A00)) // fill it with orange
             ) {
-                Text("Login", fontSize = 25.sp, fontWeight = FontWeight.Normal)
+                Text("Sign Up", fontSize = 25.sp, fontWeight = FontWeight.Normal)
             }
 
-            Spacer(modifier = Modifier.height(25.dp))
         }
 
         Row(
@@ -147,7 +156,7 @@ fun LoginScreen() {
         ) {
             // Part 1: the plain gray text
             Text(
-                text = "Don't have an account? ",
+                text = "Already have an account? ",
                 color = Color.Gray,
                 fontSize = 14.sp
             )
@@ -158,7 +167,7 @@ fun LoginScreen() {
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Text(
-                    text = "Sign Up",
+                    text = "Login",
                     color = Color(0xFFFF8C00),
                 )
             }
@@ -166,3 +175,4 @@ fun LoginScreen() {
 
     }
 }
+
