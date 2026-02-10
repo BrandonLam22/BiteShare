@@ -52,7 +52,10 @@ fun WelcomeView(viewModel: WelcomeViewModel = WelcomeViewModel()) {
                 modifier = Modifier.padding(top = 8.dp, bottom = 32.dp) // Add space around it
             )
 
-            LoginSignupButton(text = "Login", onClick = { viewModel.onLoginClicked() }) // call onLoginClicked function in ViewModel
+            LoginSignupButton(
+                text = "Login",
+                onClick = { viewModel.onLoginClicked() } // call onLoginClicked function in ViewModel
+            )
 
             Spacer(modifier = Modifier.height(16.dp)) // Adds a little gap between the buttons
 

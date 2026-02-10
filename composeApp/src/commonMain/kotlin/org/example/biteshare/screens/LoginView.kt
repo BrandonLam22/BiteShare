@@ -33,7 +33,7 @@ import org.example.biteshare.components.TextButton
 
 @Preview
 @Composable
-fun LoginView() {
+fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize() // take up the whole screen
@@ -53,12 +53,9 @@ fun LoginView() {
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            var username by remember { mutableStateOf("") } // tells Compose to save this value in the phone's memory even when the UI refreshes
-            var password by remember { mutableStateOf("") }
-
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it }, // 'it' is the new text typed by the user
+                value = viewModel.username, // Read from ViewModel
+                onValueChange = { viewModel.username = it }, // 'it' is the new text typed by the user, write to ViewModel
                 label = {
                     Text(
                         text = "Username",
@@ -77,8 +74,8 @@ fun LoginView() {
             )
 
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = viewModel.password,
+                onValueChange = { viewModel.password = it },
                 label = {
                     Text(
                         text = "Password",
@@ -111,7 +108,10 @@ fun LoginView() {
                 )
             }
 
-            LoginSignupButton(text = "Login", onClick = { /* Add navigation here later */ })
+            LoginSignupButton(
+                text = "Login",
+                onClick = { viewModel.onLoginClicked() } // View calls function in ViewModel
+            )
 
             Spacer(modifier = Modifier.height(25.dp))
         }
