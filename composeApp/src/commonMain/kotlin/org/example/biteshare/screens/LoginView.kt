@@ -59,7 +59,7 @@ fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
                 label = {
                     Text(
                         text = "Username",
-                        fontSize = 20.sp,
+                        fontSize = 16.sp,
                         color = Color.Gray,
                     )
                 },
@@ -79,7 +79,7 @@ fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
                 label = {
                     Text(
                         text = "Password",
-                        fontSize = 20.sp,
+                        fontSize = 16.sp,
                         color = Color.Gray,
                     )
                 },
@@ -107,6 +107,8 @@ fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
                     color = Color(0xFFFF8C00),
                 )
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             LoginSignupButton(
                 text = "Login",

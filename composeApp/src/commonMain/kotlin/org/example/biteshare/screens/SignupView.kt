@@ -60,7 +60,7 @@ fun SignupView(viewModel: SignupViewModel = SignupViewModel()) {
                 label = {
                     Text(
                         text = "Username",
-                        fontSize = 20.sp,
+                        fontSize = 16.sp,
                         color = Color.Gray
                     )
                 },
@@ -80,7 +80,7 @@ fun SignupView(viewModel: SignupViewModel = SignupViewModel()) {
                 label = {
                     Text(
                         text = "Password",
-                        fontSize = 20.sp,
+                        fontSize = 16.sp,
                         color = Color.Gray
                     )
                 },
@@ -102,7 +102,7 @@ fun SignupView(viewModel: SignupViewModel = SignupViewModel()) {
                 label = {
                     Text(
                         text = "Email",
-                        fontSize = 20.sp,
+                        fontSize = 16.sp,
                         color = Color.Gray
                     )
                 },
@@ -117,6 +117,8 @@ fun SignupView(viewModel: SignupViewModel = SignupViewModel()) {
                     unfocusedBorderColor = Color(0xFFFF8C00),
                 )
             )
+
+            Spacer(modifier = Modifier.height(30.dp))
 
             LoginSignupButton(
                 text = "Sign Up",
