@@ -30,7 +30,7 @@ import org.example.biteshare.components.TextButton
 
 @Preview
 @Composable
-fun SignupView() {
+fun SignupView(viewModel: SignupViewModel = SignupViewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize() // take up the whole screen
@@ -50,13 +50,13 @@ fun SignupView() {
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            var username by remember { mutableStateOf("") }
-            var password by remember { mutableStateOf("") }
-            var email by remember { mutableStateOf("") }
+//            var username by remember { mutableStateOf("") }
+//            var password by remember { mutableStateOf("") }
+//            var email by remember { mutableStateOf("") }
 
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it }, // 'it' is the new text typed by the user
+                value = viewModel.username,
+                onValueChange = { viewModel.username = it }, // 'it' is the new text typed by the user
                 label = {
                     Text(
                         text = "Username",
@@ -75,8 +75,8 @@ fun SignupView() {
             )
 
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = viewModel.password,
+                onValueChange = { viewModel.password = it },
                 label = {
                     Text(
                         text = "Password",
@@ -97,8 +97,8 @@ fun SignupView() {
             )
 
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
+                value = viewModel.email,
+                onValueChange = { viewModel.email = it },
                 label = {
                     Text(
                         text = "Email",
@@ -118,7 +118,10 @@ fun SignupView() {
                 )
             )
 
-            LoginSignupButton(text = "Sign Up", onClick = { /* Add navigation here later */ })
+            LoginSignupButton(
+                text = "Sign Up",
+                onClick = { viewModel.onSignupClicked() } // Call function in ViewModel
+            )
 
         }
 

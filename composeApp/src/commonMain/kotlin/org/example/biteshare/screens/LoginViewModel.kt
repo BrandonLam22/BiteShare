@@ -13,7 +13,7 @@ class LoginViewModel {
     // 2. LOGIC: Move the 'behavior' here
     // The View only knows the user clicked a button; the ViewModel decides what happens
     fun onLoginClicked() {
-        if (username.isNotEmpty() && password.isNotEmpty()) {
+        if (username.isNotBlank() && password.isNotBlank()) {
             println("Logic: Attempting login for $username")
             // Here is where you'd eventually call your Domain/Data layer
         }
