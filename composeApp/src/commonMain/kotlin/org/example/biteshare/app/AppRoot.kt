@@ -11,11 +11,26 @@ import org.example.biteshare.view.PickForMeView
 import org.example.biteshare.view.RecommendsView
 import org.example.biteshare.viewmodel.PickForMeViewModel
 import org.example.biteshare.viewmodel.RecommendsViewModel
+import org.example.biteshare.viewmodel.ProfileViewModel
+import org.example.biteshare.viewmodel.SavedViewModel
+import org.example.biteshare.view.ProfileView
+import org.example.biteshare.view.SavedView
+import org.example.biteshare.view.PrivacyView
+import org.example.biteshare.view.HelpView
+import org.example.biteshare.viewmodel.PrivacyViewModel
+import org.example.biteshare.viewmodel.HelpViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
 private sealed class PickRoute {
     data object Main : PickRoute()
     data class Recommends(val ctx: PickContext) : PickRoute()
+}
+
+private sealed class ProfileRoute {
+    data object Main : ProfileRoute()
+    data object Saved : ProfileRoute()
+    data object Privacy : ProfileRoute()
+    data object Help : ProfileRoute()
 }
 
 @Composable
@@ -24,9 +39,13 @@ fun AppRoot() {
 
     var tab by remember { mutableStateOf(Tab.Pick) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
-
+    var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
     val pickVm = remember { PickForMeViewModel(repo) }
     val recVm = remember { RecommendsViewModel(repo) }
+    val profileVm = remember { ProfileViewModel(repo) }
+    val savedVm = remember { SavedViewModel(repo) }
+    val privacyVm = remember { PrivacyViewModel(repo) }
+    val helpVm = remember { HelpViewModel(repo) }
 
     LaunchedEffect(pickRoute) {
         if (pickRoute is PickRoute.Recommends) {
@@ -58,7 +77,10 @@ fun AppRoot() {
                     )
                     NavigationBarItem(
                         selected = tab == Tab.Profile,
-                        onClick = { tab = Tab.Profile },
+                        onClick = {
+                            tab = Tab.Profile
+                            profileRoute = ProfileRoute.Main
+                        },
                         icon = { Text("👤") },
                         label = { Text("Profile") }
                     )
@@ -68,8 +90,48 @@ fun AppRoot() {
             when (tab) {
                 Tab.Home -> PlaceholderScreen("Home", Modifier.padding(inner))
                 Tab.Review -> PlaceholderScreen("Review", Modifier.padding(inner))
-                Tab.Profile -> PlaceholderScreen("Profile", Modifier.padding(inner))
-
+                Tab.Profile -> {
+                    when (profileRoute) {
+                        ProfileRoute.Main -> {
+                            val view = remember {
+                                ProfileView(
+                                    vm = profileVm,
+                                    onSavedRestaurants = { profileRoute = ProfileRoute.Saved },
+                                    onPrivacy = { profileRoute = ProfileRoute.Privacy },
+                                    onHelp = { profileRoute = ProfileRoute.Help }
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.Saved -> {
+                            val view = remember {
+                                SavedView(
+                                    vm = savedVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.Privacy -> {
+                            val view = remember {
+                                PrivacyView(
+                                    vm = privacyVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.Help -> {
+                            val view = remember {
+                                HelpView(
+                                    vm = helpVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                    }
+                }
                 Tab.Pick -> {
                     when (val r = pickRoute) {
                         PickRoute.Main -> {
