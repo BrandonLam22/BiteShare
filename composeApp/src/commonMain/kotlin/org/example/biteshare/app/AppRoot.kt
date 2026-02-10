@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.example.biteshare.model.FakeRepository
 import org.example.biteshare.model.PickContext
 import org.example.biteshare.view.PickForMeView
@@ -14,12 +15,14 @@ import org.example.biteshare.view.ProfileView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.PrivacyView
 import org.example.biteshare.view.HelpView
+import org.example.biteshare.view.ReviewView
 import org.example.biteshare.viewmodel.PickForMeViewModel
 import org.example.biteshare.viewmodel.RecommendsViewModel
 import org.example.biteshare.viewmodel.ProfileViewModel
 import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.PrivacyViewModel
 import org.example.biteshare.viewmodel.HelpViewModel
+import org.example.biteshare.viewmodel.ReviewViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
 
@@ -49,6 +52,8 @@ fun AppRoot() {
     val savedVm = remember { SavedViewModel(repo) }
     val privacyVm = remember { PrivacyViewModel(repo) }
     val helpVm = remember { HelpViewModel(repo) }
+    // Review Screen
+    val reviewVM = remember { ReviewViewModel() }
 
     LaunchedEffect(pickRoute) {
         if (pickRoute is PickRoute.Recommends) {
@@ -92,7 +97,13 @@ fun AppRoot() {
         ) { inner ->
             when (tab) {
                 Tab.Home -> PlaceholderScreen("Home", Modifier.padding(inner))
-                Tab.Review -> PlaceholderScreen("Review", Modifier.padding(inner))
+                Tab.Review -> {
+                    // we still use a box to handle the 'inner' padding from the Scaffold
+                    Box(modifier = Modifier.padding(inner)) {
+                        // call the function directly
+                        ReviewView(reviewVM)
+                    }
+                }
                 Tab.Profile -> {
                     when (profileRoute) {
                         ProfileRoute.Main -> {
