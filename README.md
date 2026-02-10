@@ -22,5 +22,8 @@ We are a four-person team.
 - [Team Contract](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group7)  
   Includes details on how we will work together.
 
+- [Team Meetings](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Sprint-1-Team-Meetings)  
+  Includes details of our meetings.
+
 - [Project Proposal](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group-7-Project-Proposal)  
   Describes our product vision.

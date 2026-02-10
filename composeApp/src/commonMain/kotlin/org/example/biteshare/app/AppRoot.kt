@@ -10,14 +10,14 @@ import org.example.biteshare.model.FakeRepository
 import org.example.biteshare.model.PickContext
 import org.example.biteshare.view.PickForMeView
 import org.example.biteshare.view.RecommendsView
-import org.example.biteshare.viewmodel.PickForMeViewModel
-import org.example.biteshare.viewmodel.RecommendsViewModel
-import org.example.biteshare.viewmodel.ProfileViewModel
-import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.view.ProfileView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.PrivacyView
 import org.example.biteshare.view.HelpView
+import org.example.biteshare.viewmodel.PickForMeViewModel
+import org.example.biteshare.viewmodel.RecommendsViewModel
+import org.example.biteshare.viewmodel.ProfileViewModel
+import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.PrivacyViewModel
 import org.example.biteshare.viewmodel.HelpViewModel
 
@@ -38,10 +38,11 @@ private sealed class ProfileRoute {
 @Composable
 fun AppRoot() {
     val repo = remember { FakeRepository() }
-
     var tab by remember { mutableStateOf(Tab.Home) }
+
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
+
     val pickVm = remember { PickForMeViewModel(repo) }
     val recVm = remember { RecommendsViewModel(repo) }
     val profileVm = remember { ProfileViewModel(repo) }
