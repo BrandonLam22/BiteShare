@@ -1,6 +1,7 @@
 package org.example.biteshare.app
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,6 +22,7 @@ import org.example.biteshare.viewmodel.PrivacyViewModel
 import org.example.biteshare.viewmodel.HelpViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
+
 private sealed class PickRoute {
     data object Main : PickRoute()
     data class Recommends(val ctx: PickContext) : PickRoute()
@@ -37,7 +39,7 @@ private sealed class ProfileRoute {
 fun AppRoot() {
     val repo = remember { FakeRepository() }
 
-    var tab by remember { mutableStateOf(Tab.Pick) }
+    var tab by remember { mutableStateOf(Tab.Home) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
     val pickVm = remember { PickForMeViewModel(repo) }
@@ -53,7 +55,7 @@ fun AppRoot() {
         }
     }
 
-    PickMeTheme {
+    BiteShareTheme {
         Scaffold(
             bottomBar = {
                 NavigationBar {
@@ -133,21 +135,23 @@ fun AppRoot() {
                     }
                 }
                 Tab.Pick -> {
-                    when (val r = pickRoute) {
-                        PickRoute.Main -> {
-                            val view = remember {
-                                PickForMeView(
-                                    vm = pickVm,
-                                    onGo = {
-                                        pickRoute = PickRoute.Recommends(pickVm.buildPickContext())
-                                    }
-                                )
+                    Box(Modifier.padding(inner)) {
+                        when (val r = pickRoute) {
+                            PickRoute.Main -> {
+                                val view = remember {
+                                    PickForMeView(
+                                        vm = pickVm,
+                                        onGo = {
+                                            pickRoute = PickRoute.Recommends(pickVm.buildPickContext())
+                                        }
+                                    )
+                                }
+                                view.Content()
                             }
-                            view.Content()
-                        }
-                        is PickRoute.Recommends -> {
-                            val view = remember { RecommendsView(recVm) }
-                            view.Content()
+                            is PickRoute.Recommends -> {
+                                val view = remember { RecommendsView(recVm) }
+                                view.Content()
+                            }
                         }
                     }
                 }

@@ -25,7 +25,7 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
-fun PickMeTheme(
+fun BiteShareTheme(
     dark: Boolean = false,
     content: @Composable () -> Unit
 ) {
