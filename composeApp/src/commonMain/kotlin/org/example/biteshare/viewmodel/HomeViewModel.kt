@@ -38,7 +38,7 @@ class HomeViewModel {
             popularDrinks = listOf(
                 PopularItem("dr1", "Coffee", "Hope Café"),
                 PopularItem("dr2", "Milkshake", "Love Café"),
-                PopularItem("dr3", "Capo chin", "Hope Café"),
+                PopularItem("dr3", "Capo chino", "Hope Café"),
             ),
         )
     }

@@ -1,5 +1,6 @@
-package org.example.biteshare.view
+﻿package org.example.biteshare.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -11,18 +12,57 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.model.CategoryItem
 import org.example.biteshare.model.PopularItem
 import org.example.biteshare.viewmodel.HomeViewModel
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
+
+import biteshare.composeapp.generated.resources.Res
+import biteshare.composeapp.generated.resources.beyayenet_home
+import biteshare.composeapp.generated.resources.breakfast_home
+import biteshare.composeapp.generated.resources.capo_chino_home
+import biteshare.composeapp.generated.resources.chesse_burger_home
+import biteshare.composeapp.generated.resources.coffee_home
+import biteshare.composeapp.generated.resources.drink_home
+import biteshare.composeapp.generated.resources.fast_food_home
+import biteshare.composeapp.generated.resources.local_home
+import biteshare.composeapp.generated.resources.milkshake_home
+import biteshare.composeapp.generated.resources.pizza_home
 
 private val categoryEmoji = mapOf(
-    "local" to "🍽️",
-    "fastfood" to "🍔",
-    "drink" to "🥤",
-    "breakfast" to "🍳",
+    "local" to "L",
+    "fastfood" to "F",
+    "drink" to "D",
+    "breakfast" to "B",
 )
+
+private fun categoryImageRes(label: String): DrawableResource? {
+    return when (label.lowercase()) {
+        "local" -> Res.drawable.local_home
+        "fast food" -> Res.drawable.fast_food_home
+        "drink" -> Res.drawable.drink_home
+        "breakfast" -> Res.drawable.breakfast_home
+        else -> null
+    }
+}
+
+private fun popularImageRes(title: String): DrawableResource? {
+    return when (title.lowercase()) {
+        "chess burger" -> Res.drawable.chesse_burger_home
+        "chesse burger" -> Res.drawable.chesse_burger_home
+        "pizza" -> Res.drawable.pizza_home
+        "beyayenet" -> Res.drawable.beyayenet_home
+        "coffee" -> Res.drawable.coffee_home
+        "milkshake" -> Res.drawable.milkshake_home
+        "capo chino" -> Res.drawable.capo_chino_home
+        "capo chino" -> Res.drawable.capo_chino_home
+        else -> null
+    }
+}
 
 class HomeView(
     private val vm: HomeViewModel,
@@ -100,7 +140,7 @@ class HomeView(
                 s.categories.forEach { cat ->
                     CategoryChip(
                         item = cat,
-                        emoji = categoryEmoji[cat.id] ?: "🍽️"
+                        emoji = categoryEmoji[cat.id] ?: "?"
                     )
                 }
             }
@@ -183,7 +223,17 @@ class HomeView(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Text(emoji, style = MaterialTheme.typography.headlineSmall)
+                    val imageRes = categoryImageRes(item.label)
+                    if (imageRes == null) {
+                        Text(emoji, style = MaterialTheme.typography.headlineSmall)
+                    } else {
+                        Image(
+                            painter = painterResource(imageRes),
+                            contentDescription = item.label,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -209,11 +259,21 @@ class HomeView(
                         .height(100.dp)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text("🍴", style = MaterialTheme.typography.displaySmall)
+                    val imageRes = popularImageRes(item.title)
+                    if (imageRes == null) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Text("🍴", style = MaterialTheme.typography.displaySmall)
+                        }
+                    } else {
+                        Image(
+                            painter = painterResource(imageRes),
+                            contentDescription = "${item.title} photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
                 Column(
@@ -235,3 +295,5 @@ class HomeView(
         }
     }
 }
+
+
