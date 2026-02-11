@@ -1,13 +1,23 @@
 package org.example.biteshare.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.viewmodel.RecommendsViewModel
+import org.jetbrains.compose.resources.painterResource
+
+import biteshare.composeapp.generated.resources.Res
+import biteshare.composeapp.generated.resources.compose_multiplatform
+import biteshare.composeapp.generated.resources.burgers
+import biteshare.composeapp.generated.resources.coffee
+import biteshare.composeapp.generated.resources.pizza
+import biteshare.composeapp.generated.resources.sushi
 
 class RecommendsView(
     private val vm: RecommendsViewModel,
@@ -54,6 +64,14 @@ class RecommendsView(
         saved: Boolean,
         onToggleSaved: () -> Unit,
     ) {
+        val imageRes = when (category.lowercase()) {
+            "pizza" -> Res.drawable.pizza
+            "sushi" -> Res.drawable.sushi
+            "burgers" -> Res.drawable.burgers
+            "coffee" -> Res.drawable.coffee
+            else -> Res.drawable.compose_multiplatform
+        }
+
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth()
@@ -64,6 +82,13 @@ class RecommendsView(
                         .fillMaxWidth()
                         .height(150.dp),
                 ) {
+                    Image(
+                        painter = painterResource(imageRes),
+                        contentDescription = "$name photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
                     AssistChip(
                         onClick = {},
                         label = { Text(category) },
@@ -74,15 +99,12 @@ class RecommendsView(
 
                     IconButton(
                         onClick = onToggleSaved,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(10.dp)
                     ) {
                         Text(if (saved) "♥" else "♡")
                     }
-
-                    Text(
-                        text = "Image",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
                 }
 
                 Row(

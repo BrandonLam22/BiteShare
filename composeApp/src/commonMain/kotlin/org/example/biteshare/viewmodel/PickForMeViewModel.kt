@@ -25,7 +25,7 @@ class PickForMeViewModel(
     fun setMode(mode: PickMode) {
         uiState = uiState.copy(
             mode = mode,
-            selectedFriendIds = emptySet() // 切回 Me Only 就清空选择
+            selectedFriendIds = emptySet()
         )
     }
 
