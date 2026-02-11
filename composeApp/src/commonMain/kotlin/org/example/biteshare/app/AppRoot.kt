@@ -157,16 +157,21 @@ fun AppRoot() {
                                             pickRoute = PickRoute.Recommends(pickVm.buildPickContext())
                                         }
                                     )
-                                }
-                                view.Content()
                             }
-                            is PickRoute.Recommends -> {
-                                val view = remember { RecommendsView(recVm) }
-                                view.Content()
+                            view.Content()
+                        }
+                        is PickRoute.Recommends -> {
+                            val view = remember {
+                                RecommendsView(
+                                    vm = recVm,
+                                    onBack = { pickRoute = PickRoute.Main }
+                                )
                             }
+                            view.Content()
                         }
                     }
                 }
+            }
             }
         }
     }

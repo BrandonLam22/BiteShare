@@ -21,6 +21,7 @@ import biteshare.composeapp.generated.resources.sushi
 
 class RecommendsView(
     private val vm: RecommendsViewModel,
+    private val onBack: () -> Unit = {},
 ) {
     @Composable
     fun Content() {
@@ -32,12 +33,23 @@ class RecommendsView(
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(Modifier.height(18.dp))
-            Text(
-                text = s.title,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Text("←", style = MaterialTheme.typography.titleLarge)
+                }
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = s.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(48.dp)) // balance back button width
+            }
+            Spacer(Modifier.height(12.dp))
 
             s.items.forEach { r ->
                 RestaurantCard(
