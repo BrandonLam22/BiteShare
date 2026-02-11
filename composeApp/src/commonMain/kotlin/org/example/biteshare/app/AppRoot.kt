@@ -1,7 +1,9 @@
 package org.example.biteshare.app
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,6 +17,9 @@ import org.example.biteshare.view.ProfileView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.PrivacyView
 import org.example.biteshare.view.HelpView
+import org.example.biteshare.view.BrowseView
+import org.example.biteshare.view.DetailView
+import org.example.biteshare.view.HomeView
 import org.example.biteshare.view.ReviewView
 import org.example.biteshare.viewmodel.PickForMeViewModel
 import org.example.biteshare.viewmodel.RecommendsViewModel
@@ -22,9 +27,18 @@ import org.example.biteshare.viewmodel.ProfileViewModel
 import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.PrivacyViewModel
 import org.example.biteshare.viewmodel.HelpViewModel
+import org.example.biteshare.viewmodel.BrowseViewModel
+import org.example.biteshare.viewmodel.DetailViewModel
+import org.example.biteshare.viewmodel.HomeViewModel
 import org.example.biteshare.viewmodel.ReviewViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
+
+private sealed class HomeRoute {
+    data object Main : HomeRoute()
+    data object Browse : HomeRoute()
+    data class Detail(val restaurantId: String) : HomeRoute()
+}
 
 private sealed class PickRoute {
     data object Main : PickRoute()
@@ -42,10 +56,12 @@ private sealed class ProfileRoute {
 fun AppRoot() {
     val repo = remember { FakeRepository() }
     var tab by remember { mutableStateOf(Tab.Home) }
-
+    var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
 
+    val homeVm = remember { HomeViewModel() }
+    val browseVm = remember { BrowseViewModel(repo) }
     val pickVm = remember { PickForMeViewModel(repo) }
     val recVm = remember { RecommendsViewModel(repo) }
     val profileVm = remember { ProfileViewModel(repo) }
@@ -96,7 +112,40 @@ fun AppRoot() {
             }
         ) { inner ->
             when (tab) {
-                Tab.Home -> PlaceholderScreen("Home", Modifier.padding(inner))
+                Tab.Home -> {
+                    Box(Modifier.padding(inner)) {
+                        when (homeRoute) {
+                            HomeRoute.Main -> {
+                                val view = remember {
+                                    HomeView(
+                                        vm = homeVm,
+                                        onSearchClick = { homeRoute = HomeRoute.Browse }
+                                    )
+                                }
+                                view.Content()
+                            }
+                            HomeRoute.Browse -> {
+                                val view = remember {
+                                    BrowseView(
+                                        vm = browseVm,
+                                        onBack = { homeRoute = HomeRoute.Main },
+                                        onRestaurantClick = { id -> homeRoute = HomeRoute.Detail(id) }
+                                    )
+                                }
+                                view.Content()
+                            }
+                            is HomeRoute.Detail -> {
+                                val detailVm = remember((homeRoute as HomeRoute.Detail).restaurantId) {
+                                    DetailViewModel(repo, (homeRoute as HomeRoute.Detail).restaurantId)
+                                }
+                                val view = remember(detailVm) {
+                                    DetailView(vm = detailVm, onBack = { homeRoute = HomeRoute.Browse })
+                                }
+                                view.Content()
+                            }
+                        }
+                    }
+                }
                 Tab.Review -> {
                     // we still use a box to handle the 'inner' padding from the Scaffold
                     Box(modifier = Modifier.padding(inner)) {
