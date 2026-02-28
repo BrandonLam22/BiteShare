@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import org.example.biteshare.domain.Review
 
 class ReviewViewModel {
     // 1. Data State (Information Hiding)
@@ -29,6 +30,20 @@ class ReviewViewModel {
         } else {
             selectedTags.add(tag)
         }
+    }
+
+    fun onPostClicked() {
+        // 1. Create the Domain Object
+        val newReview = Review(
+            restaurantName = this.restaurantName,
+            tags = this.selectedTags.toList(),
+            content = this.reviewText,
+        )
+
+        // 2. Send it to the Model (We will write this next)
+        // model.addReview(newReview)
+
+        println("Review created: $newReview")
     }
 
 }
