@@ -143,7 +143,10 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
 
         LoginSignupButton(
             text = "Post",
-            onClick = { }
+            onClick = {
+                // Trigger the onPostClicked() method to send data to Model
+                viewModel.onPostClicked()
+            }
         )
 
     }
