@@ -1,4 +1,9 @@
 package org.example.biteshare.model
+
+import org.example.biteshare.domain.Review
+import androidx.compose.runtime.mutableStateListOf
+import org.example.biteshare.domain.MockDB
+
 enum class PickMode { ME_ONLY, WITH_FRIENDS }
 
 data class Friend(
@@ -33,3 +38,43 @@ data class PopularItem(
     val title: String,
     val subtitle: String,
 )
+
+
+class Model {
+
+    // --- REVIEW SCREEN STATE ---
+    // A private mutable list so only the Model can modify it
+    private val _reviews = mutableStateListOf<Review>().apply {
+        addAll(MockDB.fakeReviews)
+    }
+
+    // A public read-only list for the ViewModels to observe
+    val reviews: List<Review> get() = _reviews
+
+    // --- REVIEW SCREEN FUNCTIONS ---
+    /**
+     * Adds a new review to the source of truth.
+     * This will automatically notify any UI observing 'reviews'
+     */
+    fun addReview(newReview: Review) {
+        _reviews.add(newReview)
+    }
+
+    /**
+     * Removes a specific review from the application state using its unique ID.
+     */
+    fun removeReview(reviewID: String) {
+        // We use removeAll with a predicate to find the matching ID in the observable list
+        _reviews.removeAll { it.id == reviewID }
+    }
+
+    /**
+     * Filters the global list of reviews to return only those matching a specific restaurant.
+     * * @param name The name of the restaurant to filter by.
+     * @return A list of Review objects that match the provided name.
+     */
+    fun getReviewsForRestaurant(name: String): List<Review> {
+        // Returns a new list containing only the reviews that meet the criteria
+        return _reviews.filter { it.restaurantName == name }
+    }
+}
