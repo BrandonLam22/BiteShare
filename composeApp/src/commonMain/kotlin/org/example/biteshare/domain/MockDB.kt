@@ -23,4 +23,21 @@ object MockDB {
             content = "Exactly what you expect for $5. Good value."
         )
     )
+
+
+    // --- USER DATA ---
+    val fakeUsers = listOf(
+        User(
+            id = "user_01",
+            username = "Kevin",
+            email = "k389zhan@uwaterloo.ca",
+            password = "12345"
+        ),
+        User(
+            id = "user_02",
+            username = "Steven",
+            email = "s38gao@uwaterloo.ca",
+            password = "54321"
+        )
+    )
 }

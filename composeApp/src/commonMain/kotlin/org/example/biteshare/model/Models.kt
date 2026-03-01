@@ -1,8 +1,12 @@
 package org.example.biteshare.model
 
+import androidx.compose.runtime.getValue
 import org.example.biteshare.domain.Review
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.example.biteshare.domain.MockDB
+import org.example.biteshare.domain.User
 
 enum class PickMode { ME_ONLY, WITH_FRIENDS }
 
@@ -41,6 +45,43 @@ data class PopularItem(
 
 
 class Model {
+    // --- AUTH STATE ---
+    // 1. Current Session State (The "Gatekeeper")
+    var currentUser by mutableStateOf<User?>(null)
+        private set
+
+    private val _users = mutableStateListOf<User>().apply {
+        addAll(MockDB.fakeUsers)
+    }
+
+    // --- AUTH FUNCTIONS ---
+    /**
+     * Attempts to log in a user by checking credentials against the MockDB.
+     * Returns 'true' if successful, allowing the ViewModel to trigger navigation.
+     */
+    fun login(username: String, password: String): Boolean {
+        // We search our "Fake Database" for a match
+        val user = _users.find { it.username == username && it.password == password }
+
+        return if (user != null) {
+            currentUser = user // Update the "Source of Truth"
+            true
+        } else {
+            false
+        }
+    }
+
+    /**
+     * Creates a new user session.
+     */
+    fun signup(username: String, password: String, email: String): Boolean {
+        val newUser = User(username = username, password = password, email = email) // Note: 'id' will be generated automatically in data class
+        // In a real app, save this to a database here
+        _users.add(newUser)
+        currentUser = newUser
+        return true
+    }
+
 
     // --- REVIEW SCREEN STATE ---
     // A private mutable list so only the Model can modify it
