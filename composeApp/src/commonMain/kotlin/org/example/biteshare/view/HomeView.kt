@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.biteshare.model.CategoryItem
-import org.example.biteshare.model.PopularItem
+import org.example.biteshare.domain.CategoryItem
+import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.viewmodel.HomeViewModel
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource

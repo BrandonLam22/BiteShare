@@ -3,8 +3,8 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.FakeRepository
-import org.example.biteshare.model.Restaurant
+import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.domain.Restaurant
 
 enum class BrowseFilterTab { Location, Price, Type }
 

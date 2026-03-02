@@ -1,16 +1,13 @@
 package org.example.biteshare.app
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import org.example.biteshare.model.FakeRepository
-import org.example.biteshare.model.PickContext
+import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.domain.PickContext
 import org.example.biteshare.view.PickForMeView
 import org.example.biteshare.view.RecommendsView
 import org.example.biteshare.view.ProfileView

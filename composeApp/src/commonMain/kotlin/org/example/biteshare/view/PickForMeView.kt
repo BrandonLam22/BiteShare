@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.biteshare.model.PickMode
+import org.example.biteshare.domain.PickMode
 import org.example.biteshare.viewmodel.PickForMeViewModel
 
 class PickForMeView(

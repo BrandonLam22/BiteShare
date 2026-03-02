@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.biteshare.model.Restaurant
+import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.viewmodel.BrowseFilterTab
 import org.example.biteshare.viewmodel.BrowseViewModel
 

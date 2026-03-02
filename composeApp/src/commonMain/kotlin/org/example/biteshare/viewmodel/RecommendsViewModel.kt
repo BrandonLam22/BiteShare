@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.*
+import org.example.biteshare.data.*
+import org.example.biteshare.domain.PickContext
+import org.example.biteshare.domain.Restaurant
 
 data class RecommendsUiState(
     val title: String = "Recommends",

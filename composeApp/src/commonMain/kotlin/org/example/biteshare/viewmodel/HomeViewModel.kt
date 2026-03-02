@@ -3,8 +3,8 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.CategoryItem
-import org.example.biteshare.model.PopularItem
+import org.example.biteshare.domain.CategoryItem
+import org.example.biteshare.domain.PopularItem
 
 data class HomeUiState(
     val greeting: String = "Hi, John",

@@ -3,7 +3,10 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.*
+import org.example.biteshare.data.*
+import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.PickContext
+import org.example.biteshare.domain.PickMode
 
 data class PickForMeUiState(
     val mode: PickMode = PickMode.ME_ONLY,

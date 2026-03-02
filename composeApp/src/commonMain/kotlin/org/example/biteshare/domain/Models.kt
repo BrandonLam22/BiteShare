@@ -1,12 +1,10 @@
-package org.example.biteshare.model
+package org.example.biteshare.domain
 
 import androidx.compose.runtime.getValue
-import org.example.biteshare.domain.Review
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.domain.MockDB
-import org.example.biteshare.domain.User
+import org.example.biteshare.data.MockDB
 
 enum class PickMode { ME_ONLY, WITH_FRIENDS }
 

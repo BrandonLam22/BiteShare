@@ -1,4 +1,7 @@
-package org.example.biteshare.domain
+package org.example.biteshare.data
+
+import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.User
 
 object MockDB {
     // --- REVIEW DATA ---

@@ -1,4 +1,9 @@
-package org.example.biteshare.model
+package org.example.biteshare.data
+
+import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.PickContext
+import org.example.biteshare.domain.PickMode
+import org.example.biteshare.domain.Restaurant
 
 class FakeRepository {
 
