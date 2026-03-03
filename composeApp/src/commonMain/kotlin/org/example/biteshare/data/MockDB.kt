@@ -12,13 +12,25 @@ import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
 
 object MockDB {
+
+    val friends = listOf(
+        Friend("alex", "Alex"),
+        Friend("sally", "Sally"),
+        Friend("mandy", "Mandy"),
+        Friend("david", "David"),
+        Friend("kevin", "Kevin"),
+        Friend("steven", "Steven"),
+    )
+    val fakeFriends: List<Friend> = friends
+
     val fakeUsers = listOf(
         User(
             id = "user_01",
             username = "Kevin",
             email = "k389zhan@uwaterloo.ca",
             password = "12345",
-            savedRestaurantIds = listOf("p1", "b1", "bp1")
+            savedRestaurantIds = listOf("p1", "b1", "bp1"),
+            friends = fakeFriends
         ),
         User(
             id = "user_02",
@@ -40,16 +52,6 @@ object MockDB {
             password = "brandon123"
         )
     )
-
-    val friends = listOf(
-        Friend("alex", "Alex"),
-        Friend("sally", "Sally"),
-        Friend("mandy", "Mandy"),
-        Friend("david", "David"),
-        Friend("kevin", "Kevin"),
-        Friend("steven", "Steven"),
-    )
-    val fakeFriends: List<Friend> = friends
 
     val coreRestaurants = listOf(
         Restaurant("p1", "Joe's Pizza", "Pizza", "$12.99", "18-28 min", 4.6, isSaved = true, location = "Waterloo"),

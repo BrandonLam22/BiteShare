@@ -123,6 +123,12 @@ class FakeRepository(
 
     fun recommend(context: PickContext): List<Restaurant> = PickModel(this).recommend(context)
 
+    fun userPreferences(): List<String> =
+        model.currentUser?.preferences ?: emptyList()
+
+    fun userRestrictions(): List<String> =
+        model.currentUser?.foodRestrictions ?: emptyList()
+
     fun getProfile(): ProfileData {
         val user = model.currentUser ?: MockDB.fakeUsers.firstOrNull()
         return ProfileData(

@@ -85,7 +85,13 @@ class PickModel(
 
     fun recommend(context: PickContext): List<Restaurant> {
         val filtered = applyFilters(repo.restaurants(), context.filters)
-        return rankForMode(filtered, context.mode, context.selectedFriendIds)
+        val withoutRestrictedItems = applyUserRestrictions(filtered, repo.userRestrictions())
+        return rankForMode(
+            restaurants = withoutRestrictedItems,
+            mode = context.mode,
+            selectedFriendIds = context.selectedFriendIds,
+            preferences = repo.userPreferences(),
+        )
     }
 
     fun previewCount(context: PickContext): Int = recommend(context).size
@@ -143,19 +149,152 @@ class PickModel(
         restaurants: List<Restaurant>,
         mode: PickMode,
         selectedFriendIds: Set<String>,
+        preferences: List<String>,
     ): List<Restaurant> {
+        val preferenceKeywords = extractKeywords(preferences, forRestrictions = false)
+        val preferenceScoreById = if (preferenceKeywords.isEmpty()) {
+            emptyMap()
+        } else {
+            restaurants.associate { it.id to preferenceScore(it, preferenceKeywords) }
+        }
+        fun score(restaurant: Restaurant): Int = preferenceScoreById[restaurant.id] ?: 0
+
         return when (mode) {
-            PickMode.ME_ONLY -> restaurants.sortedByDescending { it.rating }
+            PickMode.ME_ONLY -> {
+                restaurants.sortedWith(
+                    compareByDescending<Restaurant> { score(it) }
+                        .thenByDescending { it.rating }
+                        .thenBy { priceValue(it.price) }
+                )
+            }
+
             PickMode.WITH_FRIENDS -> {
                 if (selectedFriendIds.size < 2) {
-                    restaurants.sortedByDescending { it.rating }
+                    restaurants.sortedWith(
+                        compareByDescending<Restaurant> { score(it) }
+                            .thenByDescending { it.rating }
+                            .thenBy { priceValue(it.price) }
+                    )
                 } else {
                     restaurants.sortedWith(
-                        compareBy<Restaurant> { priceValue(it.price) }
+                        compareByDescending<Restaurant> { score(it) }
+                            .thenBy { priceValue(it.price) }
                             .thenByDescending { it.rating }
                     )
                 }
             }
+        }
+    }
+
+    private fun applyUserRestrictions(
+        restaurants: List<Restaurant>,
+        restrictions: List<String>,
+    ): List<Restaurant> {
+        val blockedKeywords = extractKeywords(restrictions, forRestrictions = true)
+        if (blockedKeywords.isEmpty()) return restaurants
+
+        return restaurants.filter { restaurant ->
+            val signals = restaurantSignals(restaurant)
+            blockedKeywords.none { keyword -> signals.contains(keyword) }
+        }
+    }
+
+    private fun preferenceScore(
+        restaurant: Restaurant,
+        preferenceKeywords: Set<String>,
+    ): Int {
+        if (preferenceKeywords.isEmpty()) return 0
+        val signals = restaurantSignals(restaurant)
+        return preferenceKeywords.count { keyword -> signals.contains(keyword) }
+    }
+
+    private fun restaurantSignals(restaurant: Restaurant): String {
+        val detail = repo.getRestaurantDetailById(restaurant.id)
+        val detailText = detail?.featuredItems
+            ?.joinToString(" ") { "${it.name} ${it.description}" }
+            .orEmpty()
+
+        return buildString {
+            append(restaurant.name.lowercase())
+            append(" ")
+            append(restaurant.category.lowercase())
+            append(" ")
+            append(restaurant.location.lowercase())
+            append(" ")
+            append(detail?.description?.lowercase().orEmpty())
+            append(" ")
+            append(detail?.attributes?.joinToString(" ")?.lowercase().orEmpty())
+            append(" ")
+            append(detailText.lowercase())
+        }
+    }
+
+    private fun extractKeywords(
+        values: List<String>,
+        forRestrictions: Boolean,
+    ): Set<String> {
+        val stopWords = setOf(
+            "and", "the", "with", "for", "food", "only", "prefer", "preference",
+            "allergy", "allergic", "avoid", "without", "from", "that", "this",
+            "mine", "my", "eat", "eating", "to"
+        )
+
+        val keywords = mutableSetOf<String>()
+        values.forEach { raw ->
+            val normalized = raw.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
+            if (normalized.isBlank()) return@forEach
+            keywords += normalized
+
+            normalized.split(" ")
+                .filter { token -> token.length >= 3 && token !in stopWords }
+                .forEach { token -> keywords += token }
+
+            if ("bubble tea" in normalized) keywords += "bubble tea"
+            if ("fast food" in normalized) keywords += "fast food"
+            if ("middle eastern" in normalized) keywords += "middle eastern"
+        }
+
+        return keywords
+            .flatMap { keyword -> expandKeyword(keyword, forRestrictions) }
+            .toSet()
+    }
+
+    private fun expandKeyword(
+        keyword: String,
+        forRestrictions: Boolean,
+    ): Set<String> {
+        if (forRestrictions) {
+            return when (keyword) {
+                "sushi", "seafood", "fish", "shrimp" ->
+                    setOf("sushi", "seafood", "fish", "shrimp", "japanese")
+                "coffee", "cafe", "tea", "caffeine", "bubble tea", "boba" ->
+                    setOf("coffee", "cafe", "tea", "bubble tea", "milk tea", "boba")
+                "pizza" -> setOf("pizza", "slice")
+                "burger", "burgers", "fast food", "fries" ->
+                    setOf("burger", "burgers", "fast food", "fries", "poutine")
+                "halal", "shawarma", "middle eastern", "kabob" ->
+                    setOf("halal", "shawarma", "middle eastern", "kabob", "kofta")
+                "vegetarian", "vegan", "meat", "beef", "chicken", "pork" ->
+                    setOf("meat", "beef", "chicken", "pork", "burger", "shawarma", "kabob", "grill")
+                "gluten", "wheat" ->
+                    setOf("bread", "noodle", "pizza", "wrap", "pasta")
+                "dairy", "lactose", "milk", "cheese" ->
+                    setOf("milk", "cheese", "cream", "latte", "mocha")
+                else -> setOf(keyword)
+            }
+        }
+
+        return when (keyword) {
+            "sushi", "seafood" -> setOf("sushi", "seafood", "japanese")
+            "coffee", "cafe", "tea", "bubble tea", "boba" ->
+                setOf("coffee", "cafe", "tea", "bubble tea", "milk tea", "boba")
+            "burger", "burgers", "fast food" ->
+                setOf("burger", "burgers", "fast food", "fries")
+            "halal", "shawarma", "middle eastern", "kabob" ->
+                setOf("halal", "shawarma", "middle eastern", "kabob")
+            "indian", "curry", "paneer" ->
+                setOf("indian", "curry", "paneer")
+            else -> setOf(keyword)
         }
     }
 }

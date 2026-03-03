@@ -3,6 +3,7 @@ package org.example.biteshare.domain
 import org.example.biteshare.data.FakeRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PickModelTest {
@@ -61,5 +62,45 @@ class PickModelTest {
         val actualCount = model.recommend(context).size
 
         assertEquals(actualCount, previewCount)
+    }
+
+    @Test
+    fun recommendUsesSavedPreferencesFromProfileForRanking() {
+        val modelState = Model()
+        modelState.login("Kevin", "12345")
+        val user = requireNotNull(modelState.currentUser)
+        modelState.updateUserProfile(
+            username = user.username,
+            email = user.email,
+            bio = user.bio,
+            preferences = listOf("Pizza"),
+            foodRestrictions = emptyList()
+        )
+
+        val personalized = PickModel(FakeRepository(modelState))
+        val items = personalized.recommend(PickContext(mode = PickMode.ME_ONLY))
+
+        assertTrue(items.isNotEmpty())
+        assertTrue(items.first().category.equals("Pizza", ignoreCase = true))
+    }
+
+    @Test
+    fun recommendAppliesSavedRestrictionsFromProfile() {
+        val modelState = Model()
+        modelState.login("Kevin", "12345")
+        val user = requireNotNull(modelState.currentUser)
+        modelState.updateUserProfile(
+            username = user.username,
+            email = user.email,
+            bio = user.bio,
+            preferences = emptyList(),
+            foodRestrictions = listOf("No Sushi")
+        )
+
+        val personalized = PickModel(FakeRepository(modelState))
+        val items = personalized.recommend(PickContext(mode = PickMode.ME_ONLY))
+
+        assertFalse(items.any { it.name.contains("sushi", ignoreCase = true) })
+        assertFalse(items.any { it.category.equals("Sushi", ignoreCase = true) })
     }
 }
