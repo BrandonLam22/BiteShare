@@ -11,19 +11,22 @@ object MockDB {
             id = "1",
             restaurantName = "Pizza Palace",
             tags = listOf("Italian", "Casual"),
-            content = "Great crust, but the service was slow."
+            content = "Great crust, but the service was slow.",
+            rating = 8
         ),
         Review(
             id = "2",
             restaurantName = "Sushi Zen",
             tags = listOf("Japanese", "Fresh"),
-            content = "Best salmon nigiri in the city!"
+            content = "Best salmon nigiri in the city!",
+            rating = 7
         ),
         Review(
             id = "3",
             restaurantName = "Burger Joint",
             tags = listOf("Fast Food", "Greasy"),
-            content = "Exactly what you expect for $5. Good value."
+            content = "Exactly what you expect for $5. Good value.",
+            rating = 9
         )
     )
 

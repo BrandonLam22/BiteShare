@@ -10,4 +10,5 @@ data class Review(
     val restaurantName: String,
     val tags: List<String>,
     val content: String,
+    val rating: Int = 5,    // 1-10, default 5
 )
