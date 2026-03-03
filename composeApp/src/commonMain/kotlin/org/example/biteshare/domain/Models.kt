@@ -41,6 +41,14 @@ data class PopularItem(
     val subtitle: String,
 )
 
+/** 首页聚合数据：由 data 层组装，供 HomeViewModel 消费 */
+data class HomeFeed(
+    val greeting: String,
+    val categories: List<CategoryItem>,
+    val popularDishes: List<PopularItem>,
+    val popularDrinks: List<PopularItem>,
+)
+
 
 class Model {
     // --- AUTH STATE ---

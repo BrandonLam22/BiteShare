@@ -93,10 +93,18 @@ class BrowseView(
 
             // Top Addis Food Places header
             Text(
-                text = "Top Addis Food Places",
+                text = s.headerTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+            if (s.activeTag != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Filtered by: ${s.activeTag}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -109,6 +117,12 @@ class BrowseView(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (s.activeTag != null) {
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = vm::clearTagFilter) {
+                        Text("Clear")
+                    }
+                }
             }
             Spacer(Modifier.height(4.dp))
             Row(
@@ -140,6 +154,16 @@ class BrowseView(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                if (s.restaurants.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No restaurants found for this tag.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 24.dp)
+                        )
+                    }
+                }
                 items(s.restaurants, key = { it.id }) { restaurant ->
                     RestaurantCard(
                         restaurant = restaurant,

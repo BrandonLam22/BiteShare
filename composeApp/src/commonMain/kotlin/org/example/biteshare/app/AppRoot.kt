@@ -57,7 +57,7 @@ fun AppRoot() {
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
 
-    val homeVm = remember { HomeViewModel() }
+    val homeVm = remember { HomeViewModel(repo) }
     val browseVm = remember { BrowseViewModel(repo) }
     val pickVm = remember { PickForMeViewModel(repo) }
     val recVm = remember { RecommendsViewModel(repo) }
@@ -116,7 +116,14 @@ fun AppRoot() {
                                 val view = remember {
                                     HomeView(
                                         vm = homeVm,
-                                        onSearchClick = { homeRoute = HomeRoute.Browse }
+                                        onSearchClick = {
+                                            browseVm.clearTagFilter()
+                                            homeRoute = HomeRoute.Browse
+                                        },
+                                        onTagClick = { tag ->
+                                            browseVm.applyTagFilter(tag)
+                                            homeRoute = HomeRoute.Browse
+                                        }
                                     )
                                 }
                                 view.Content()
