@@ -7,14 +7,16 @@ import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
-import org.example.biteshare.domain.PickMode
+import org.example.biteshare.domain.PickModel
 import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 
-class FakeRepository(private val model: Model) {
+class FakeRepository(
+    private val model: Model = Model(),
+) {
     private data class HomeType(
         val id: String,
         val label: String,
@@ -35,20 +37,26 @@ class FakeRepository(private val model: Model) {
 
     private var notificationsEnabled = true
 
-    fun friends(): List<Friend> = MockDB.friends
+    fun friends(): List<Friend> = MockDB.fakeFriends
 
     fun restaurants(): List<Restaurant> {
-        val userSavedIds = model.getSavedRestaurantIds()
-        return MockDB.coreRestaurants.map { it.copy(isSaved = userSavedIds.contains(it.id)) }
+        val savedIds = effectiveSavedIds()
+        return MockDB.coreRestaurants.map { restaurant ->
+            restaurant.copy(isSaved = restaurant.id in savedIds)
+        }
     }
 
     fun browseRestaurants(): List<Restaurant> {
-        val userSavedIds = model.getSavedRestaurantIds()
-        return MockDB.browseRestaurants.map { it.copy(isSaved = userSavedIds.contains(it.id)) }
+        val savedIds = effectiveSavedIds()
+        return MockDB.browseRestaurants.map { restaurant ->
+            restaurant.copy(isSaved = restaurant.id in savedIds)
+        }
     }
 
     fun getRestaurantById(id: String): Restaurant? =
-        (restaurants() + browseRestaurants()).distinctBy { it.id }.find { it.id == id }
+        (restaurants() + browseRestaurants())
+            .distinctBy { it.id }
+            .find { it.id == id }
 
     fun getHomeFeed(userName: String = "John"): HomeFeed {
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
@@ -107,20 +115,20 @@ class FakeRepository(private val model: Model) {
         return all.filter { restaurant -> classifyRestaurantTypes(restaurant).any { it in targetTypes } }
     }
 
-    fun recommend(context: PickContext): List<Restaurant> {
-        val base = restaurants().sortedByDescending { it.rating }
-        return when (context.mode) {
-            PickMode.ME_ONLY -> base
-            PickMode.WITH_FRIENDS -> if (context.selectedFriendIds.size >= 2) base.reversed() else base
-        }
-    }
+    fun locations(): List<String> =
+        (restaurants() + browseRestaurants())
+            .map { it.location }
+            .distinct()
+            .sorted()
+
+    fun recommend(context: PickContext): List<Restaurant> = PickModel(this).recommend(context)
 
     fun getProfile(): ProfileData {
-        val user = model.currentUser
+        val user = model.currentUser ?: MockDB.fakeUsers.firstOrNull()
         return ProfileData(
             name = user?.username ?: "Guest",
             email = user?.email ?: "",
-            friendCount = user?.friends?.size ?: 0,
+            friendCount = user?.friends?.size ?: MockDB.friends.size,
             notificationsEnabled = notificationsEnabled
         )
     }
@@ -130,10 +138,10 @@ class FakeRepository(private val model: Model) {
     }
 
     fun getSavedRestaurants(): List<Restaurant> {
-        val userSavedIds = model.getSavedRestaurantIds()
+        val savedIds = effectiveSavedIds()
         return (restaurants() + browseRestaurants())
             .distinctBy { it.id }
-            .filter { userSavedIds.contains(it.id) }
+            .filter { it.id in savedIds }
     }
 
     fun toggleSaved(restaurantId: String) {
@@ -145,7 +153,7 @@ class FakeRepository(private val model: Model) {
     }
 
     fun getEditableProfile(): EditableProfile {
-        val user = model.currentUser
+        val user = model.currentUser ?: MockDB.fakeUsers.firstOrNull()
         return EditableProfile(
             username = user?.username ?: "",
             email = user?.email ?: "",
@@ -165,6 +173,11 @@ class FakeRepository(private val model: Model) {
         model.updateUserProfile(username, email, bio, preferences, foodRestrictions)
     }
 
+    private fun effectiveSavedIds(): Set<String> {
+        val userSaved = model.getSavedRestaurantIds()
+        return if (userSaved.isNotEmpty()) userSaved else MockDB.defaultSavedRestaurantIds
+    }
+
     private fun buildFallbackDetail(summary: Restaurant): RestaurantDetail {
         val query = summary.name.replace(" ", "+")
         val imageKey = when (summary.category.lowercase()) {
@@ -180,15 +193,15 @@ class FakeRepository(private val model: Model) {
             images = listOf(imageKey, "drink_home"),
             featuredItems = listOf(FeaturedItem("Chef Recommendation", summary.price, "Popular choice from this restaurant")),
             location = RestaurantLocation(
-                city = "Waterloo",
-                address = "${summary.name}, Waterloo",
+                city = summary.location,
+                address = "${summary.name}, ${summary.location}",
                 distance = "2.5 miles away",
             ),
             reviews = MockDB.reviewsForRestaurant(summary.name),
             description = "${summary.name} is known for ${summary.category.lowercase()} and consistent service.",
             rating = summary.rating,
             attributes = listOf(summary.category, "Popular"),
-            googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$query+Waterloo",
+            googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$query+${summary.location.replace(" ", "+")}",
             restaurantWebsite = "https://example.com/${summary.id}",
             priceRange = summary.price,
         )
@@ -254,4 +267,3 @@ class FakeRepository(private val model: Model) {
     private fun normalizeTag(tag: String): String =
         tag.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 }
-

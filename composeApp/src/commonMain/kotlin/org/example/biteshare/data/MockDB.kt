@@ -12,7 +12,6 @@ import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
 
 object MockDB {
-    // --- USER DATA ---
     val fakeUsers = listOf(
         User(
             id = "user_01",
@@ -42,7 +41,6 @@ object MockDB {
         )
     )
 
-    // --- FRIEND DATA ---
     val friends = listOf(
         Friend("alex", "Alex"),
         Friend("sally", "Sally"),
@@ -51,33 +49,39 @@ object MockDB {
         Friend("kevin", "Kevin"),
         Friend("steven", "Steven"),
     )
+    val fakeFriends: List<Friend> = friends
 
-    // --- RESTAURANT LIST DATA (core + browse) ---
     val coreRestaurants = listOf(
-        Restaurant("p1", "Joe's Pizza", "Pizza", "$12.99", "18-28 min", 4.6, isSaved = true),
-        Restaurant("s1", "Ken Sushi House", "Sushi", "$19.50", "25-35 min", 4.4),
-        Restaurant("b1", "Mel's Diner", "Burgers", "$13.75", "20-30 min", 4.2, isSaved = true),
-        Restaurant("c1", "Williams Fresh Cafe", "Coffee", "$5.20", "8-15 min", 4.5),
-        Restaurant("uw1", "Lazeez Shawarma", "Middle Eastern", "$11.25", "10-18 min", 4.3, isSaved = true),
-        Restaurant("uw2", "iPotato", "Fast Food", "$9.99", "12-20 min", 4.1),
-        Restaurant("uw3", "The Alley Waterloo", "Drink", "$6.40", "9-16 min", 4.4),
-        Restaurant("uw4", "Gol's Lanzhou Noodle", "Noodles", "$14.30", "18-26 min", 4.5),
+        Restaurant("p1", "Joe's Pizza", "Pizza", "$12.99", "18-28 min", 4.6, isSaved = true, location = "Waterloo"),
+        Restaurant("s1", "Ken Sushi House", "Sushi", "$19.50", "25-35 min", 4.4, location = "Waterloo"),
+        Restaurant("b1", "Mel's Diner", "Burgers", "$13.75", "20-30 min", 4.2, isSaved = true, location = "Waterloo"),
+        Restaurant("c1", "Williams Fresh Cafe", "Coffee", "$5.20", "8-15 min", 4.5, location = "Waterloo"),
+        Restaurant("h1", "Hope Café", "Coffee", "$4.50", "10-15 min", 4.9, location = "Addis Ababa"),
+        Restaurant("l1", "Abebe Hot", "Local", "$8.90", "20-30 min", 4.3, location = "Addis Ababa"),
+        Restaurant("uw1", "Lazeez Shawarma", "Middle Eastern", "$11.25", "10-18 min", 4.3, isSaved = true, location = "Waterloo"),
+        Restaurant("uw2", "iPotato", "Fast Food", "$9.99", "12-20 min", 4.1, location = "Waterloo"),
+        Restaurant("uw3", "The Alley Waterloo", "Drink", "$6.40", "9-16 min", 4.4, location = "Waterloo"),
+        Restaurant("uw4", "Gol's Lanzhou Noodle", "Noodles", "$14.30", "18-26 min", 4.5, location = "Waterloo"),
     )
 
     val browseRestaurants = listOf(
-        Restaurant("bp1", "Pasta Palace", "Italian", "$13.50", "22-32 min", 4.2, isSaved = true),
-        Restaurant("bp2", "Pizza Plaza", "Pizza", "$11.50", "19-29 min", 4.0),
-        Restaurant("bp3", "Campus Pizza", "Pizza", "$10.20", "16-24 min", 4.1, isSaved = false),
-        Restaurant("uw5", "Shawerma Plus", "Middle Eastern", "$12.40", "14-22 min", 4.2),
-        Restaurant("uw6", "Bao Sandwich Bar", "Asian Fusion", "$13.80", "17-27 min", 4.4),
-        Restaurant("uw7", "The Cactus Board Game Cafe", "Cafe", "$8.60", "11-18 min", 4.3),
-        Restaurant("uw8", "Aunty's Kitchen", "Indian", "$15.90", "23-33 min", 4.5),
-        Restaurant("uw9", "Kabob Hut Waterloo", "Grill", "$14.60", "20-30 min", 4.2),
+        Restaurant("bp1", "Pasta Palace", "Italian", "$13.50", "22-32 min", 4.2, isSaved = true, location = "Waterloo"),
+        Restaurant("bp2", "Pizza Plaza", "Pizza", "$11.50", "19-29 min", 4.0, location = "Addis Ababa"),
+        Restaurant("bp3", "Campus Pizza", "Pizza", "$10.20", "16-24 min", 4.1, location = "Waterloo"),
+        Restaurant("bp4", "Burger Town", "Fast Food", "$7.99", "20-30 min", 3.9, location = "Kitchener"),
+        Restaurant("uw5", "Shawerma Plus", "Middle Eastern", "$12.40", "14-22 min", 4.2, location = "Waterloo"),
+        Restaurant("uw6", "Bao Sandwich Bar", "Asian Fusion", "$13.80", "17-27 min", 4.4, location = "Waterloo"),
+        Restaurant("uw7", "The Cactus Board Game Cafe", "Cafe", "$8.60", "11-18 min", 4.3, location = "Waterloo"),
+        Restaurant("uw8", "Aunty's Kitchen", "Indian", "$15.90", "23-33 min", 4.5, location = "Waterloo"),
+        Restaurant("uw9", "Kabob Hut Waterloo", "Grill", "$14.60", "20-30 min", 4.2, location = "Waterloo"),
     )
+
+    val fakeRestaurants: List<Restaurant> = coreRestaurants
+    val fakeBrowseRestaurants: List<Restaurant> = coreRestaurants + browseRestaurants
+    val defaultSavedRestaurantIds: Set<String> = fakeUsers.firstOrNull()?.savedRestaurantIds?.toSet().orEmpty()
 
     val allRestaurants: List<Restaurant> = (coreRestaurants + browseRestaurants).distinctBy { it.id }
 
-    // --- REVIEW DATA ---
     val fakeReviews = listOf(
         Review(
             id = "r1",
@@ -109,83 +113,97 @@ object MockDB {
         ),
         Review(
             id = "r5",
+            restaurantName = "Hope Café",
+            tags = listOf("Coffee", "Affordable"),
+            content = "Budget coffee with consistent quality.",
+            rating = 9
+        ),
+        Review(
+            id = "r6",
             restaurantName = "Lazeez Shawarma",
             tags = listOf("Spicy", "Fast"),
             content = "Fast and filling after evening classes.",
             rating = 8
         ),
         Review(
-            id = "r6",
+            id = "r7",
             restaurantName = "iPotato",
             tags = listOf("Fast Food", "Affordable"),
             content = "Good value and lots of topping choices.",
             rating = 7
         ),
         Review(
-            id = "r7",
+            id = "r8",
             restaurantName = "The Alley Waterloo",
             tags = listOf("Bubble Tea", "Sweet"),
             content = "The brown sugar milk tea is consistently good.",
             rating = 9
         ),
         Review(
-            id = "r8",
+            id = "r9",
             restaurantName = "Gol's Lanzhou Noodle",
             tags = listOf("Noodles", "Hand Pulled"),
             content = "Hand-pulled noodles are chewy and flavorful.",
             rating = 9
         ),
         Review(
-            id = "r9",
+            id = "r10",
             restaurantName = "Pasta Palace",
             tags = listOf("Italian", "Group Friendly"),
             content = "Great portion sizes for sharing.",
             rating = 8
         ),
         Review(
-            id = "r10",
+            id = "r11",
             restaurantName = "Pizza Plaza",
             tags = listOf("Pizza", "Takeout"),
             content = "Reliable takeout and good lunch specials.",
             rating = 8
         ),
         Review(
-            id = "r11",
+            id = "r12",
+            restaurantName = "Pizza Palace",
+            tags = listOf("Pizza", "Cheesy"),
+            content = "Great cheesy slices near campus.",
+            rating = 8
+        ),
+        Review(
+            id = "r13",
             restaurantName = "Campus Pizza",
             tags = listOf("Budget Friendly", "Quick Bite"),
             content = "Solid quick bite near campus.",
             rating = 7
         ),
         Review(
-            id = "r12",
+            id = "r14",
             restaurantName = "Shawerma Plus",
             tags = listOf("Middle Eastern", "Late Night"),
             content = "Open late and portions are huge.",
             rating = 8
         ),
         Review(
-            id = "r13",
+            id = "r15",
             restaurantName = "Bao Sandwich Bar",
             tags = listOf("Fusion", "Creative"),
             content = "Interesting flavors and very fresh buns.",
             rating = 8
         ),
         Review(
-            id = "r14",
+            id = "r16",
             restaurantName = "The Cactus Board Game Cafe",
             tags = listOf("Cafe", "Group"),
             content = "Fun spot for board games and drinks.",
             rating = 9
         ),
         Review(
-            id = "r15",
+            id = "r17",
             restaurantName = "Aunty's Kitchen",
             tags = listOf("Indian", "Rich Flavor"),
             content = "Very flavorful curry and friendly staff.",
             rating = 9
         ),
         Review(
-            id = "r16",
+            id = "r18",
             restaurantName = "Kabob Hut Waterloo",
             tags = listOf("Grill", "Protein"),
             content = "Fresh grilled skewers and great garlic sauce.",
@@ -193,7 +211,6 @@ object MockDB {
         )
     )
 
-    // --- HOME DATA ---
     val homeCategories = listOf(
         CategoryItem("local", "Local"),
         CategoryItem("fastfood", "Fast Food"),
@@ -207,7 +224,7 @@ object MockDB {
             greeting = "Hi, $userName",
             categories = homeCategories,
             popularDishes = listOf(
-                PopularItem("d1", "Chess Burger", topRated.getOrNull(0)?.name ?: "Mel's Diner"),
+                PopularItem("d1", "Cheese Burger", topRated.getOrNull(0)?.name ?: "Mel's Diner"),
                 PopularItem("d2", "Pizza", topRated.getOrNull(1)?.name ?: "Joe's Pizza"),
                 PopularItem("d3", "Beyayenet", topRated.getOrNull(2)?.name ?: "Aunty's Kitchen"),
             ),
@@ -219,7 +236,6 @@ object MockDB {
         )
     }
 
-    // --- DETAIL DATA ---
     val restaurantDetails: Map<String, RestaurantDetail> = allRestaurants.associate { restaurant ->
         restaurant.id to generatedDetail(restaurant)
     }.toMutableMap().apply {
@@ -268,15 +284,15 @@ object MockDB {
             images = listOf(imageByCategory(restaurant.category), "drink_home"),
             featuredItems = featured,
             location = RestaurantLocation(
-                city = "Waterloo",
-                address = "${restaurant.name}, University Ave W, Waterloo",
+                city = restaurant.location,
+                address = "${restaurant.name}, University Ave W, ${restaurant.location}",
                 distance = restaurant.eta.replace(" min", " away")
             ),
             reviews = reviewsForRestaurant(restaurant.name),
             description = description,
             rating = restaurant.rating,
             attributes = attributes,
-            googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$query+Waterloo",
+            googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$query+${restaurant.location.replace(" ", "+")}",
             restaurantWebsite = "https://example.com/${restaurant.id}",
             priceRange = restaurant.price,
         )
@@ -364,6 +380,7 @@ object MockDB {
             "asian fusion" -> listOf("Fusion", "Trendy", "Takeout")
             "indian" -> listOf("Indian", "Spicy", "Rich Flavor")
             "grill" -> listOf("Grill", "High Protein", "Family Friendly")
+            "local" -> listOf("Local", "Traditional", "Student Friendly")
             else -> listOf(category, "Takeout", "Student Friendly")
         }
     }

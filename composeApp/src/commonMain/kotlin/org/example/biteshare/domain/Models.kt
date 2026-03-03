@@ -4,9 +4,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.data.MockDB
 
 enum class PickMode { ME_ONLY, WITH_FRIENDS }
+
+enum class BudgetFilter(
+    val label: String,
+    val maxPrice: Double?,
+) {
+    ANY("Any", null),
+    BUDGET("$", 10.0),
+    MID("$$", 20.0),
+    PREMIUM("$$$", 60.0),
+}
+
+enum class CuisineFilter(val label: String) {
+    ALL("All"),
+    LOCAL("Local"),
+    FAST_FOOD("Fast Food"),
+    DRINK("Drink"),
+    BREAKFAST("Breakfast"),
+    PIZZA("Pizza"),
+    SUSHI("Sushi"),
+    BURGERS("Burgers"),
+    COFFEE("Coffee"),
+    ITALIAN("Italian"),
+}
 
 data class Friend(
     val id: String,
@@ -21,11 +45,22 @@ data class Restaurant(
     val eta: String,
     val rating: Double,
     val isSaved: Boolean = false,
+    val location: String = "Addis Ababa",
+    val isOpenNow: Boolean = true,
+)
+
+data class PickFilters(
+    val location: String = "Any",
+    val budget: BudgetFilter = BudgetFilter.ANY,
+    val cuisine: CuisineFilter = CuisineFilter.ALL,
+    val openNowOnly: Boolean = false,
+    val minRating: Double = 0.0,
 )
 
 data class PickContext(
     val mode: PickMode,
     val selectedFriendIds: Set<String> = emptySet(),
+    val filters: PickFilters = PickFilters(),
 )
 
 /** 主屏分类（Local, Fast Food, Drink, Breakfast） */
@@ -41,6 +76,89 @@ data class PopularItem(
     val subtitle: String,
 )
 
+class PickModel(
+    private val repo: FakeRepository,
+) {
+    fun friends(): List<Friend> = repo.friends()
+
+    fun locations(): List<String> = repo.locations()
+
+    fun recommend(context: PickContext): List<Restaurant> {
+        val filtered = applyFilters(repo.restaurants(), context.filters)
+        return rankForMode(filtered, context.mode, context.selectedFriendIds)
+    }
+
+    fun previewCount(context: PickContext): Int = recommend(context).size
+
+    private fun applyFilters(
+        restaurants: List<Restaurant>,
+        filters: PickFilters,
+    ): List<Restaurant> {
+        return restaurants.filter { restaurant ->
+            val locationMatches = filters.location == "Any" ||
+                restaurant.location.equals(filters.location, ignoreCase = true)
+            val budgetMatches = matchesBudget(restaurant, filters.budget)
+            val cuisineMatches = matchesCuisine(restaurant, filters.cuisine)
+            val openStatusMatches = !filters.openNowOnly || restaurant.isOpenNow
+            // Restaurant.rating is stored on a 5-point scale; UI filter uses 10-point scale.
+            val ratingMatches = (restaurant.rating * 2) >= filters.minRating
+
+            locationMatches && budgetMatches && cuisineMatches && openStatusMatches && ratingMatches
+        }
+    }
+
+    private fun matchesBudget(
+        restaurant: Restaurant,
+        budget: BudgetFilter,
+    ): Boolean {
+        val maxPrice = budget.maxPrice ?: return true
+        return priceValue(restaurant.price) <= maxPrice
+    }
+
+    private fun matchesCuisine(
+        restaurant: Restaurant,
+        cuisine: CuisineFilter,
+    ): Boolean {
+        if (cuisine == CuisineFilter.ALL) return true
+
+        val category = restaurant.category.lowercase()
+        return when (cuisine) {
+            CuisineFilter.ALL -> true
+            CuisineFilter.LOCAL -> category == "local"
+            CuisineFilter.FAST_FOOD -> category == "fast food" || category == "burgers"
+            CuisineFilter.DRINK -> category == "drink" || category == "coffee"
+            CuisineFilter.BREAKFAST -> category == "breakfast"
+            CuisineFilter.PIZZA -> category == "pizza"
+            CuisineFilter.SUSHI -> category == "sushi"
+            CuisineFilter.BURGERS -> category == "burgers"
+            CuisineFilter.COFFEE -> category == "coffee"
+            CuisineFilter.ITALIAN -> category == "italian"
+        }
+    }
+
+    private fun priceValue(rawPrice: String): Double =
+        rawPrice.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: Double.MAX_VALUE
+
+    private fun rankForMode(
+        restaurants: List<Restaurant>,
+        mode: PickMode,
+        selectedFriendIds: Set<String>,
+    ): List<Restaurant> {
+        return when (mode) {
+            PickMode.ME_ONLY -> restaurants.sortedByDescending { it.rating }
+            PickMode.WITH_FRIENDS -> {
+                if (selectedFriendIds.size < 2) {
+                    restaurants.sortedByDescending { it.rating }
+                } else {
+                    restaurants.sortedWith(
+                        compareBy<Restaurant> { priceValue(it.price) }
+                            .thenByDescending { it.rating }
+                    )
+                }
+            }
+        }
+    }
+}
 /** 首页聚合数据：由 data 层组装，供 HomeViewModel 消费 */
 data class HomeFeed(
     val greeting: String,
@@ -145,17 +263,17 @@ class Model {
     fun toggleSavedRestaurant(restaurantId: String) {
         val user = currentUser ?: return
         val currentSaved = user.savedRestaurantIds.toMutableList()
-        
+
         if (currentSaved.contains(restaurantId)) {
             currentSaved.remove(restaurantId)
         } else {
             currentSaved.add(restaurantId)
         }
-        
+
         // Update current user with new saved list
         val updatedUser = user.copy(savedRestaurantIds = currentSaved)
         currentUser = updatedUser
-        
+
         // Also update in the users list
         val index = _users.indexOfFirst { it.id == user.id }
         if (index != -1) {

@@ -6,12 +6,9 @@ import androidx.compose.runtime.setValue
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.Restaurant
 
-enum class BrowseFilterTab { Location, Price, Type }
-
 data class BrowseUiState(
     val allRestaurants: List<Restaurant> = emptyList(),
     val restaurants: List<Restaurant> = emptyList(),
-    val selectedFilter: BrowseFilterTab = BrowseFilterTab.Location,
     val resultCount: Int = 0,
     val locationLabel: String = "Addis Ababa",
     val priceLabel: String = "$$$",
@@ -38,10 +35,6 @@ class BrowseViewModel(
             resultCount = list.size,
             headerTitle = "Top Food Places",
         )
-    }
-
-    fun selectFilter(tab: BrowseFilterTab) {
-        uiState = uiState.copy(selectedFilter = tab)
     }
 
     fun applyTagFilter(tag: String) {

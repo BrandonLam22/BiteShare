@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.domain.Restaurant
-import org.example.biteshare.viewmodel.BrowseFilterTab
 import org.example.biteshare.viewmodel.BrowseViewModel
 
 class BrowseView(
@@ -72,23 +71,6 @@ class BrowseView(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Filter tabs: Location, Price, Type
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                BrowseFilterTab.entries.forEach { tab ->
-                    val selected = s.selectedFilter == tab
-                    FilterChip(
-                        selected = selected,
-                        onClick = { vm.selectFilter(tab) },
-                        label = { Text(tab.name) }
-                    )
-                }
-            }
-
             Spacer(Modifier.height(20.dp))
 
             // Top Addis Food Places header
@@ -123,28 +105,6 @@ class BrowseView(
                         Text("Clear")
                     }
                 }
-            }
-            Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = s.locationLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = s.priceLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = s.openStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
             }
 
             Spacer(Modifier.height(16.dp))
