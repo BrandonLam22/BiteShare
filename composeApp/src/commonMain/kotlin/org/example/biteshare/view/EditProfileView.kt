@@ -20,6 +20,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+
 
 class EditProfileView(
     private val vm: EditProfileViewModel,
@@ -121,7 +129,49 @@ class EditProfileView(
                 maxLines = 4
             )
 
+            Spacer(Modifier.height(24.dp))
+
+// Change Password
+            Surface(
+                onClick = { vm.openPasswordDialog() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 1.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("🔒", style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Change Password",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Update your password",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(">", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
             Spacer(Modifier.height(32.dp))
+// ... continue with Food Preferences section ...
 
             // Food Preferences Section
             PreferenceSection(
@@ -185,6 +235,126 @@ class EditProfileView(
         }
     }
 
+    @Composable
+    private fun PasswordDialog(
+        currentPassword: String,
+        newPassword: String,
+        confirmPassword: String,
+        passwordError: String?,
+        onCurrentPasswordChange: (String) -> Unit,
+        onNewPasswordChange: (String) -> Unit,
+        onConfirmPasswordChange: (String) -> Unit,
+        onDismiss: () -> Unit,
+        onConfirm: () -> Unit
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    text = "Change Password",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter your current password and choose a new one",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Current Password
+                    OutlinedTextField(
+                        value = currentPassword,
+                        onValueChange = onCurrentPasswordChange,
+                        label = { Text("Current Password") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password
+                        ),
+                        isError = passwordError != null
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // New Password
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = onNewPasswordChange,
+                        label = { Text("New Password") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password
+                        ),
+                        isError = passwordError != null
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Confirm Password
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = onConfirmPasswordChange,
+                        label = { Text("Confirm New Password") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { onConfirm() }
+                        ),
+                        isError = passwordError != null
+                    )
+
+                    // Error message
+                    if (passwordError != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = passwordError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Password hint
+                    Text(
+                        text = "Password must be at least 6 characters",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = onConfirm,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Change Password")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
     @Composable
     private fun PreferenceSection(
         title: String,

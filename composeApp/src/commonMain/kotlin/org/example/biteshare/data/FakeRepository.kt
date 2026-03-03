@@ -108,6 +108,15 @@ class FakeRepository (private val model: Model) {
         )
     }
 
+    fun verifyPassword(password: String): Boolean {
+        val user = model.currentUser ?: return false
+        return user.password == password
+    }
+
+    fun updatePassword(newPassword: String) {
+        model.updatePassword(newPassword)
+    }
+
     fun updateProfile(
         username: String,
         email: String,
@@ -117,4 +126,6 @@ class FakeRepository (private val model: Model) {
     ) {
         model.updateUserProfile(username, email, bio, preferences, foodRestrictions)
     }
+
+
 }

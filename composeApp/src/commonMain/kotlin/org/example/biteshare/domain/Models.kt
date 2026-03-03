@@ -170,6 +170,20 @@ class Model {
         println("User logged out")
     }
 
+    fun updatePassword(newPassword: String) {
+        val user = currentUser ?: return
+
+        val updatedUser = user.copy(password = newPassword)
+        currentUser = updatedUser
+
+        val index = _users.indexOfFirst { it.id == user.id }
+        if (index != -1) {
+            _users[index] = updatedUser
+        }
+
+        println("Password updated successfully")
+    }
+
     fun updateUserProfile(
         username: String,
         email: String,
@@ -189,11 +203,9 @@ class Model {
 
         currentUser = updatedUser
 
-        // Update in users list
         val index = _users.indexOfFirst { it.id == user.id }
         if (index != -1) {
             _users[index] = updatedUser
         }
     }
-
 }

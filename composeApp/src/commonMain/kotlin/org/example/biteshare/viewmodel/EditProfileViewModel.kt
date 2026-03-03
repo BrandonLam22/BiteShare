@@ -15,12 +15,20 @@ data class EditProfileUiState(
     val restrictionInput: String = "",
     val showPreferenceError: Boolean = false,
     val showRestrictionError: Boolean = false,
+    val showPasswordDialog: Boolean = false,
+    val currentPassword: String = "",
+    val newPassword: String = "",
+    val confirmPassword: String = "",
+    val passwordError: String? = null,
     val hasChanges: Boolean = false
 )
 
 class EditProfileViewModel(
     private val repo: FakeRepository,
 ) {
+
+
+
     var uiState by mutableStateOf(EditProfileUiState())
         private set
 
@@ -140,6 +148,87 @@ class EditProfileViewModel(
             ) != originalState
         )
     }
+    fun openPasswordDialog() {
+        uiState = uiState.copy(
+            showPasswordDialog = true,
+            currentPassword = "",
+            newPassword = "",
+            confirmPassword = "",
+            passwordError = null
+        )
+    }
+
+    fun closePasswordDialog() {
+        uiState = uiState.copy(
+            showPasswordDialog = false,
+            currentPassword = "",
+            newPassword = "",
+            confirmPassword = "",
+            passwordError = null
+        )
+    }
+
+    fun updateCurrentPassword(value: String) {
+        uiState = uiState.copy(
+            currentPassword = value,
+            passwordError = null
+        )
+    }
+
+    fun updateNewPassword(value: String) {
+        uiState = uiState.copy(
+            newPassword = value,
+            passwordError = null
+        )
+    }
+
+    fun updateConfirmPassword(value: String) {
+        uiState = uiState.copy(
+            confirmPassword = value,
+            passwordError = null
+        )
+    }
+
+    private fun validatePassword(): Boolean {
+        if (uiState.currentPassword.isEmpty()) {
+            uiState = uiState.copy(passwordError = "Please enter your current password")
+            return false
+        }
+
+        if (!repo.verifyPassword(uiState.currentPassword)) {
+            uiState = uiState.copy(passwordError = "Current password is incorrect")
+            return false
+        }
+
+        if (uiState.newPassword.isEmpty()) {
+            uiState = uiState.copy(passwordError = "Please enter a new password")
+            return false
+        }
+
+        if (uiState.newPassword.length < 6) {
+            uiState = uiState.copy(passwordError = "Password must be at least 6 characters")
+            return false
+        }
+
+        if (uiState.newPassword != uiState.confirmPassword) {
+            uiState = uiState.copy(passwordError = "Passwords do not match")
+            return false
+        }
+
+        return true
+    }
+
+    fun changePassword() {
+        if (!validatePassword()) {
+            return
+        }
+
+        // Update password
+        repo.updatePassword(uiState.newPassword)
+
+        // Close dialog on success
+        closePasswordDialog()
+    }
 
     fun saveProfile() {
         repo.updateProfile(
@@ -150,6 +239,8 @@ class EditProfileViewModel(
             foodRestrictions = uiState.foodRestrictions.toList()
         )
     }
+
+
 }
 
 private fun String.capitalize(): String {
