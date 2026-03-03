@@ -42,3 +42,9 @@ class PickForMeViewModel(
     fun buildPickContext(): PickContext =
         PickContext(mode = uiState.mode, selectedFriendIds = uiState.selectedFriendIds)
 }
+
+
+// Picking Logic
+
+// 
+

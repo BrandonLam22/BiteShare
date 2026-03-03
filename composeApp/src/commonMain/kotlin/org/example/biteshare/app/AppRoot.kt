@@ -51,7 +51,8 @@ private sealed class ProfileRoute {
 
 @Composable
 fun AppRoot() {
-    val repo = remember { FakeRepository() }
+    val model = remember { Model() }
+    val repo = remember { FakeRepository(model) }
     var tab by remember { mutableStateOf(Tab.Home) }
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }

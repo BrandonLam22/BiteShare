@@ -4,8 +4,11 @@ import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.Model
+import org.example.biteshare.domain.ProfileData
 
-class FakeRepository {
+class FakeRepository (private val model: Model) {
+   
 
     fun friends(): List<Friend> = listOf(
         Friend("alex", "Alex"),
@@ -14,25 +17,43 @@ class FakeRepository {
         Friend("david", "David"),
     )
 
-    fun restaurants(): List<Restaurant> = listOf(
-        Restaurant("p1", "Joe's Pizza", "Pizza", "$2.99", "30-40 min", 4.5, isSaved = true),
-        Restaurant("s1", "Sushi Star", "Sushi", "$49.99", "50-60 min", 4.0),
-        Restaurant("b1", "Light Restaurant", "Burgers", "$12.50", "25-35 min", 4.2, isSaved = true),
-        Restaurant("c1", "Hope Café", "Coffee", "$4.50", "10-15 min", 4.6),
-    )
+    fun restaurants(): List<Restaurant> {
+        val userSavedIds = model.getSavedRestaurantIds()
+        
+        return listOf(
+            Restaurant("p1", "Joe's Pizza", "Pizza", "$2.99", "30-40 min", 4.5, 
+                isSaved = userSavedIds.contains("p1")),
+            Restaurant("s1", "Sushi Star", "Sushi", "$49.99", "50-60 min", 4.0, 
+                isSaved = userSavedIds.contains("s1")),
+            Restaurant("b1", "Light Restaurant", "Burgers", "$12.50", "25-35 min", 4.2, 
+                isSaved = userSavedIds.contains("b1")),
+            Restaurant("c1", "Hope Café", "Coffee", "$4.50", "10-15 min", 4.6, 
+                isSaved = userSavedIds.contains("c1")),
+        )
+    }
 
     fun getRestaurantById(id: String): Restaurant? =
         (restaurants() + browseRestaurants()).distinctBy { it.id }.find { it.id == id }
 
     /** 浏览页用：更多餐厅（含 Pasta Palace、Pizza Plaza 等） */
-    fun browseRestaurants(): List<Restaurant> = listOf(
-        Restaurant("bp1", "Pasta Palace", "Italian", "$3.99", "30-40 min", 4.5, isSaved = true),
-        Restaurant("bp2", "Pizza Plaza", "Pizza", "$2.99", "25-35 min", 4.0),
-        Restaurant("bp3", "Pizza", "Pizza", "$2.99", "30-40 min", 4.5, isSaved = false),
-        Restaurant("b1", "Light Restaurant", "Burgers", "$12.50", "25-35 min", 4.2, isSaved = true),
-        Restaurant("p1", "Joe's Pizza", "Pizza", "$2.99", "30-40 min", 4.5, isSaved = true),
-        Restaurant("s1", "Sushi Star", "Sushi", "$49.99", "50-60 min", 4.0, isSaved = false),
-    )
+    fun browseRestaurants(): List<Restaurant> {
+        val userSavedIds = model.getSavedRestaurantIds()
+        
+        return listOf(
+            Restaurant("bp1", "Pasta Palace", "Italian", "$3.99", "30-40 min", 4.5, 
+                isSaved = userSavedIds.contains("bp1")),
+            Restaurant("bp2", "Pizza Plaza", "Pizza", "$2.99", "25-35 min", 4.0, 
+                isSaved = userSavedIds.contains("bp2")),
+            Restaurant("bp3", "Pizza", "Pizza", "$2.99", "30-40 min", 4.5, 
+                isSaved = userSavedIds.contains("bp3")),
+            Restaurant("b1", "Light Restaurant", "Burgers", "$12.50", "25-35 min", 4.2, 
+                isSaved = userSavedIds.contains("b1")),
+            Restaurant("p1", "Joe's Pizza", "Pizza", "$2.99", "30-40 min", 4.5, 
+                isSaved = userSavedIds.contains("p1")),
+            Restaurant("s1", "Sushi Star", "Sushi", "$49.99", "50-60 min", 4.0, 
+                isSaved = userSavedIds.contains("s1")),
+        )
+    }
 
     fun recommend(context: PickContext): List<Restaurant> {
         val base = restaurants().sortedByDescending { it.rating }
@@ -42,5 +63,32 @@ class FakeRepository {
                 if (context.selectedFriendIds.size >= 2) base.reversed() else base
             }
         }
+    }
+
+    fun getProfile(): ProfileData {
+        val user = model.currentUser
+        
+        return ProfileData(
+            name = user?.username ?: "Guest",
+            email = user?.email ?: "",
+            friendCount = user?.friends?.size ?: 0,
+            notificationsEnabled = notificationsEnabled
+        )
+    }
+
+    fun updateNotificationPreference(enabled: Boolean) {
+        notificationsEnabled = enabled
+    }
+
+    fun getSavedRestaurants(): List<Restaurant> {
+        val userSavedIds = model.getSavedRestaurantIds()
+        
+        return (restaurants() + browseRestaurants())
+            .distinctBy { it.id }
+            .filter { userSavedIds.contains(it.id) }
+    }
+
+    fun toggleSaved(restaurantId: String) {
+        model.toggleSavedRestaurant(restaurantId)
     }
 }
