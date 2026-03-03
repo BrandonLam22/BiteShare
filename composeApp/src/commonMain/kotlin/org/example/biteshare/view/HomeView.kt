@@ -59,7 +59,6 @@ private fun popularImageRes(title: String): DrawableResource? {
         "coffee" -> Res.drawable.coffee_home
         "milkshake" -> Res.drawable.milkshake_home
         "capo chino" -> Res.drawable.capo_chino_home
-        "capo chino" -> Res.drawable.capo_chino_home
         else -> null
     }
 }
@@ -295,5 +294,3 @@ class HomeView(
         }
     }
 }
-
-

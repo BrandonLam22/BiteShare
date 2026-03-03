@@ -3,6 +3,8 @@ package org.example.biteshare.view
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,14 +24,18 @@ import biteshare.composeapp.generated.resources.sushi
 class RecommendsView(
     private val vm: RecommendsViewModel,
     private val onBack: () -> Unit = {},
+    private val actionLabel: String? = null,
+    private val onActionClick: (() -> Unit)? = null,
 ) {
     @Composable
     fun Content() {
         val s = vm.uiState
+        val scrollState = rememberScrollState()
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(Modifier.height(18.dp))
@@ -51,17 +57,42 @@ class RecommendsView(
             }
             Spacer(Modifier.height(12.dp))
 
-            s.items.forEach { r ->
-                RestaurantCard(
-                    category = r.category,
-                    name = r.name,
-                    price = r.price,
-                    eta = r.eta,
-                    rating = r.rating,
-                    saved = r.isSaved,
-                    onToggleSaved = { vm.toggleSaved(r.id) }
+            if (s.items.isEmpty()) {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = "No recommendations match your current filters.",
+                    style = MaterialTheme.typography.bodyLarge
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Go back and relax one or two filters.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                s.items.forEach { r ->
+                    RestaurantCard(
+                        category = r.category,
+                        name = r.name,
+                        price = r.price,
+                        eta = r.eta,
+                        rating = r.rating,
+                        saved = r.isSaved,
+                        onToggleSaved = { vm.toggleSaved(r.id) }
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+
+            if (actionLabel != null && onActionClick != null) {
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = onActionClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = s.items.isNotEmpty()
+                ) {
+                    Text(actionLabel)
+                }
             }
         }
     }

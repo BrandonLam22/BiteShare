@@ -8,8 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.PickContext
+import org.example.biteshare.domain.PickModel
+import org.example.biteshare.domain.PickMode
 import org.example.biteshare.view.PickForMeView
 import org.example.biteshare.view.RecommendsView
+import org.example.biteshare.view.VoteWithFriendsView
 import org.example.biteshare.view.ProfileView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.PrivacyView
@@ -28,6 +31,7 @@ import org.example.biteshare.viewmodel.BrowseViewModel
 import org.example.biteshare.viewmodel.DetailViewModel
 import org.example.biteshare.viewmodel.HomeViewModel
 import org.example.biteshare.viewmodel.ReviewViewModel
+import org.example.biteshare.viewmodel.VoteWithFriendsViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
 
@@ -39,6 +43,8 @@ private sealed class HomeRoute {
 
 private sealed class PickRoute {
     data object Main : PickRoute()
+    data class Generated(val ctx: PickContext) : PickRoute()
+    data class Vote(val ctx: PickContext) : PickRoute()
     data class Recommends(val ctx: PickContext) : PickRoute()
 }
 
@@ -52,6 +58,7 @@ private sealed class ProfileRoute {
 @Composable
 fun AppRoot() {
     val repo = remember { FakeRepository() }
+    val pickModel = remember { PickModel(repo) }
     var tab by remember { mutableStateOf(Tab.Home) }
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
@@ -59,20 +66,14 @@ fun AppRoot() {
 
     val homeVm = remember { HomeViewModel() }
     val browseVm = remember { BrowseViewModel(repo) }
-    val pickVm = remember { PickForMeViewModel(repo) }
-    val recVm = remember { RecommendsViewModel(repo) }
+    val pickVm = remember { PickForMeViewModel(pickModel) }
+    val recVm = remember { RecommendsViewModel(pickModel) }
     val profileVm = remember { ProfileViewModel(repo) }
     val savedVm = remember { SavedViewModel(repo) }
     val privacyVm = remember { PrivacyViewModel(repo) }
     val helpVm = remember { HelpViewModel(repo) }
     // Review Screen
     val reviewVM = remember { ReviewViewModel() }
-
-    LaunchedEffect(pickRoute) {
-        if (pickRoute is PickRoute.Recommends) {
-            recVm.load((pickRoute as PickRoute.Recommends).ctx)
-        }
-    }
 
     BiteShareTheme {
         Scaffold(
@@ -194,30 +195,67 @@ fun AppRoot() {
                 }
                 Tab.Pick -> {
                     Box(Modifier.padding(inner)) {
-                        when (val r = pickRoute) {
+                        when (val route = pickRoute) {
                             PickRoute.Main -> {
                                 val view = remember {
                                     PickForMeView(
                                         vm = pickVm,
                                         onGo = {
-                                            pickRoute = PickRoute.Recommends(pickVm.buildPickContext())
+                                            val context = pickVm.buildPickContext()
+                                            if (context.mode == PickMode.WITH_FRIENDS) {
+                                                recVm.loadItems(
+                                                    items = pickModel.recommend(context),
+                                                    title = "Generated Recommends"
+                                                )
+                                                pickRoute = PickRoute.Generated(context)
+                                            } else {
+                                                recVm.load(context)
+                                                pickRoute = PickRoute.Recommends(context)
+                                            }
                                         }
                                     )
+                                }
+                                view.Content()
                             }
-                            view.Content()
-                        }
-                        is PickRoute.Recommends -> {
-                            val view = remember {
-                                RecommendsView(
-                                    vm = recVm,
-                                    onBack = { pickRoute = PickRoute.Main }
-                                )
+                            is PickRoute.Generated -> {
+                                val view = remember {
+                                    RecommendsView(
+                                        vm = recVm,
+                                        onBack = { pickRoute = PickRoute.Main },
+                                        actionLabel = "Start Voting",
+                                        onActionClick = { pickRoute = PickRoute.Vote(route.ctx) }
+                                    )
+                                }
+                                view.Content()
                             }
-                            view.Content()
+                            is PickRoute.Vote -> {
+                                val voteVm = remember(route.ctx) {
+                                    VoteWithFriendsViewModel(
+                                        model = pickModel,
+                                        context = route.ctx,
+                                        candidateRestaurants = recVm.uiState.items
+                                    )
+                                }
+                                val view = remember(voteVm) {
+                                    VoteWithFriendsView(
+                                        vm = voteVm,
+                                        onBack = { pickRoute = PickRoute.Generated(route.ctx) }
+                                    )
+                                }
+                                view.Content()
+                            }
+                            is PickRoute.Recommends -> {
+                                val view = remember {
+                                    RecommendsView(
+                                        vm = recVm,
+                                        onBack = { pickRoute = PickRoute.Main }
+                                    )
+                                }
+                                view.Content()
+                            }
                         }
                     }
                 }
-            }
             }
         }
     }
