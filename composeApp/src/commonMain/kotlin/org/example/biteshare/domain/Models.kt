@@ -48,6 +48,15 @@ data class ProfileData(
     val notificationsEnabled: Boolean,
 )
 
+data class EditableProfile(
+    val username: String,
+    val email: String,
+    val bio: String,
+    val preferences: List<String>,
+    val foodRestrictions: List<String>
+)
+
+
 
 
 class Model {
@@ -154,6 +163,37 @@ class Model {
      */
     fun getSavedRestaurantIds(): Set<String> {
         return currentUser?.savedRestaurantIds?.toSet() ?: emptySet()
+    }
+
+    fun logout() {
+        currentUser = null
+        println("User logged out")
+    }
+
+    fun updateUserProfile(
+        username: String,
+        email: String,
+        bio: String,
+        preferences: List<String>,
+        foodRestrictions: List<String>
+    ) {
+        val user = currentUser ?: return
+
+        val updatedUser = user.copy(
+            username = username,
+            email = email,
+            bio = bio,
+            preferences = preferences,
+            foodRestrictions = foodRestrictions
+        )
+
+        currentUser = updatedUser
+
+        // Update in users list
+        val index = _users.indexOfFirst { it.id == user.id }
+        if (index != -1) {
+            _users[index] = updatedUser
+        }
     }
 
 }

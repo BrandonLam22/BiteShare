@@ -17,6 +17,8 @@ class ProfileView(
     private val onSavedRestaurants: () -> Unit,
     private val onPrivacy: () -> Unit,
     private val onHelp: () -> Unit,
+    private val onLogout: () -> Unit,
+    private val onEditProfile: () -> Unit,
 ) {
 
     @Composable
@@ -84,7 +86,7 @@ class ProfileView(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Button(
-                    onClick = { /* Edit profile */ },
+                    onClick = onEditProfile,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -92,16 +94,16 @@ class ProfileView(
                 }
                 Spacer(Modifier.width(12.dp))
                 StatColumn(
-                    count = s.followingCount.toString(),
-                    label = "Following",
+                    count = s.friendCount.toString(),
+                    label = "Friends",
                     modifier = Modifier.weight(0.7f)
                 )
-                Spacer(Modifier.width(12.dp))
+                /*Spacer(Modifier.width(12.dp))
                 StatColumn(
                     count = s.followersCount.toString(),
                     label = "Followers",
                     modifier = Modifier.weight(0.7f)
-                )
+                )*/
             }
 
             Spacer(Modifier.height(32.dp))
@@ -160,7 +162,8 @@ class ProfileView(
             MenuItem(
                 icon = "👋",
                 text = "Logout",
-                onClick = vm::logout
+                onClick = {vm.logout()
+                        onLogout()}
             )
         }
     }

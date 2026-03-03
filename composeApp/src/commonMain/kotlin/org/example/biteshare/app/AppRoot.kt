@@ -28,6 +28,9 @@ import org.example.biteshare.viewmodel.BrowseViewModel
 import org.example.biteshare.viewmodel.DetailViewModel
 import org.example.biteshare.viewmodel.HomeViewModel
 import org.example.biteshare.viewmodel.ReviewViewModel
+import org.example.biteshare.domain.Model
+import org.example.biteshare.view.EditProfileView
+import org.example.biteshare.viewmodel.EditProfileViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
 
@@ -47,17 +50,19 @@ private sealed class ProfileRoute {
     data object Saved : ProfileRoute()
     data object Privacy : ProfileRoute()
     data object Help : ProfileRoute()
+
+    data object EditProfile : ProfileRoute()
 }
 
 @Composable
-fun AppRoot() {
-    val model = remember { Model() }
+fun AppRoot(model: Model) {
+    //val model = remember<Model> { Model() }
     val repo = remember { FakeRepository(model) }
     var tab by remember { mutableStateOf(Tab.Home) }
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
-
+    val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
     val homeVm = remember { HomeViewModel() }
     val browseVm = remember { BrowseViewModel(repo) }
     val pickVm = remember { PickForMeViewModel(repo) }
@@ -159,7 +164,23 @@ fun AppRoot() {
                                     vm = profileVm,
                                     onSavedRestaurants = { profileRoute = ProfileRoute.Saved },
                                     onPrivacy = { profileRoute = ProfileRoute.Privacy },
-                                    onHelp = { profileRoute = ProfileRoute.Help }
+                                    onHelp = { profileRoute = ProfileRoute.Help },
+                                            onLogout = {
+                                        // Logout is handled - AuthGate will detect and navigate
+                                    },
+                                    onEditProfile = {profileRoute = ProfileRoute.EditProfile}
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.EditProfile -> {  // ADD THIS CASE
+                            val view = remember {
+                                EditProfileView(
+                                    vm = editProfileVm,
+                                    onBack = {
+                                        profileRoute = ProfileRoute.Main
+                                        profileVm.loadProfile() // Refresh profile data
+                                    }
                                 )
                             }
                             view.Content()

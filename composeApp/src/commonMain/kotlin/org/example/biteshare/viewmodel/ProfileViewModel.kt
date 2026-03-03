@@ -22,12 +22,12 @@ class ProfileViewModel(
         loadProfile()
     }
 
-    private fun loadProfile() {
+    fun loadProfile() {
         val profileData = repo.getProfile()  // CHANGED: Get from repository
         uiState = ProfileUiState(
             name = profileData.name,
             email = profileData.email,
-            friendCount = profileData.followingCount,
+            friendCount = profileData.friendCount,
             notificationsEnabled = profileData.notificationsEnabled
         )
     }
@@ -39,7 +39,6 @@ class ProfileViewModel(
     }
 
     fun logout() {
-        // TODO: Clear user session and navigate to login
-        println("User logged out")
+        repo.logout()
     }
 }

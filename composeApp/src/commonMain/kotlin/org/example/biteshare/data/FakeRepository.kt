@@ -1,5 +1,6 @@
 package org.example.biteshare.data
 
+import org.example.biteshare.domain.EditableProfile
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickMode
@@ -8,8 +9,8 @@ import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.ProfileData
 
 class FakeRepository (private val model: Model) {
-   
 
+    private var notificationsEnabled = true
     fun friends(): List<Friend> = listOf(
         Friend("alex", "Alex"),
         Friend("sally", "Sally"),
@@ -90,5 +91,30 @@ class FakeRepository (private val model: Model) {
 
     fun toggleSaved(restaurantId: String) {
         model.toggleSavedRestaurant(restaurantId)
+    }
+
+    fun logout() {
+        model.logout()
+    }
+
+    fun getEditableProfile(): EditableProfile {
+        val user = model.currentUser
+        return EditableProfile(
+            username = user?.username ?: "",
+            email = user?.email ?: "",
+            bio = user?.bio ?: "",
+            preferences = user?.preferences ?: emptyList(),
+            foodRestrictions = user?.foodRestrictions ?: emptyList()
+        )
+    }
+
+    fun updateProfile(
+        username: String,
+        email: String,
+        bio: String,
+        preferences: List<String>,
+        foodRestrictions: List<String>
+    ) {
+        model.updateUserProfile(username, email, bio, preferences, foodRestrictions)
     }
 }

@@ -9,9 +9,13 @@ data class User (
     val username: String,
     val email: String,
     val password: String,
+    val bio: String = "",
     val reviews: List<Review> = emptyList(),       
     val friends: List<Friend> = emptyList(),        
-    val preferences: List<String> = emptyList() 
-    val savedRestaurantIds: List<String> = emptyList()
+    val preferences: List<String> = emptyList(),
+    val savedRestaurantIds: List<String> = emptyList(),
+    val foodRestrictions: List<String> = emptyList(),
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
 
 )
