@@ -1,18 +1,20 @@
 package org.example.biteshare.data
 
-import org.example.biteshare.domain.Friend
-import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.CategoryItem
+import org.example.biteshare.domain.EditableProfile
+import org.example.biteshare.domain.FeaturedItem
+import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.HomeFeed
+import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.domain.PopularItem
+import org.example.biteshare.domain.ProfileData
+import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
-import org.example.biteshare.domain.Restaurant
 
-class FakeRepository {
-
+class FakeRepository(private val model: Model) {
     private data class HomeType(
         val id: String,
         val label: String,
@@ -31,55 +33,47 @@ class FakeRepository {
         HomeType("desserts", "Desserts", isDrinkType = true),
     )
 
+    private var notificationsEnabled = true
+
     fun friends(): List<Friend> = MockDB.friends
+
+    fun restaurants(): List<Restaurant> {
+        val userSavedIds = model.getSavedRestaurantIds()
+        return MockDB.coreRestaurants.map { it.copy(isSaved = userSavedIds.contains(it.id)) }
+    }
+
+    fun browseRestaurants(): List<Restaurant> {
+        val userSavedIds = model.getSavedRestaurantIds()
+        return MockDB.browseRestaurants.map { it.copy(isSaved = userSavedIds.contains(it.id)) }
+    }
 
     fun getRestaurantById(id: String): Restaurant? =
         (restaurants() + browseRestaurants()).distinctBy { it.id }.find { it.id == id }
 
-    fun restaurants(): List<Restaurant> = MockDB.coreRestaurants
-
     fun getHomeFeed(userName: String = "John"): HomeFeed {
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
         val typeCounts = linkedMapOf<String, Int>()
-
         all.forEach { restaurant ->
-            val labels = classifyRestaurantTypes(restaurant)
-            labels.forEach { label ->
+            classifyRestaurantTypes(restaurant).forEach { label ->
                 typeCounts[label] = (typeCounts[label] ?: 0) + 1
             }
         }
 
-        val activeTypes = homeTypeCatalog
-            .filter { (typeCounts[it.label] ?: 0) > 0 }
-
-        val categories = activeTypes.map { type ->
-            CategoryItem(id = type.id, label = type.label)
-        }
-
+        val activeTypes = homeTypeCatalog.filter { (typeCounts[it.label] ?: 0) > 0 }
+        val categories = activeTypes.map { CategoryItem(id = it.id, label = it.label) }
         val popularDishes = activeTypes
             .filterNot { it.isDrinkType }
             .sortedByDescending { typeCounts[it.label] ?: 0 }
             .take(4)
             .mapIndexed { idx, type ->
-                val count = typeCounts[type.label] ?: 0
-                PopularItem(
-                    id = "dish_type_${idx + 1}",
-                    title = type.label,
-                    subtitle = "$count places"
-                )
+                PopularItem("dish_type_${idx + 1}", type.label, "${typeCounts[type.label] ?: 0} places")
             }
-
         val popularDrinks = activeTypes
             .filter { it.isDrinkType }
             .sortedByDescending { typeCounts[it.label] ?: 0 }
             .take(4)
             .mapIndexed { idx, type ->
-                val count = typeCounts[type.label] ?: 0
-                PopularItem(
-                    id = "drink_type_${idx + 1}",
-                    title = type.label,
-                    subtitle = "$count places"
-                )
+                PopularItem("drink_type_${idx + 1}", type.label, "${typeCounts[type.label] ?: 0} places")
             }
 
         return HomeFeed(
@@ -91,17 +85,13 @@ class FakeRepository {
                     PopularItem("dish_fallback_2", "Pizza", "3 places"),
                     PopularItem("dish_fallback_3", "Japanese", "1 place"),
                 )
-            } else {
-                popularDishes
-            },
+            } else popularDishes,
             popularDrinks = if (popularDrinks.isEmpty()) {
                 listOf(
                     PopularItem("drink_fallback_1", "Coffee & Tea", "2 places"),
                     PopularItem("drink_fallback_2", "Bubble Tea", "1 place"),
                 )
-            } else {
-                popularDrinks
-            },
+            } else popularDrinks,
         )
     }
 
@@ -110,27 +100,69 @@ class FakeRepository {
         return MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
     }
 
-    fun browseRestaurants(): List<Restaurant> = MockDB.browseRestaurants
-
     fun getRestaurantsByTag(tag: String): List<Restaurant> {
         val targetTypes = resolveHomeTypes(tag)
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
         if (targetTypes.isEmpty()) return all
-
-        return all.filter { restaurant ->
-            val labels = classifyRestaurantTypes(restaurant)
-            labels.any { it in targetTypes }
-        }
+        return all.filter { restaurant -> classifyRestaurantTypes(restaurant).any { it in targetTypes } }
     }
 
     fun recommend(context: PickContext): List<Restaurant> {
         val base = restaurants().sortedByDescending { it.rating }
         return when (context.mode) {
             PickMode.ME_ONLY -> base
-            PickMode.WITH_FRIENDS -> {
-                if (context.selectedFriendIds.size >= 2) base.reversed() else base
-            }
+            PickMode.WITH_FRIENDS -> if (context.selectedFriendIds.size >= 2) base.reversed() else base
         }
+    }
+
+    fun getProfile(): ProfileData {
+        val user = model.currentUser
+        return ProfileData(
+            name = user?.username ?: "Guest",
+            email = user?.email ?: "",
+            friendCount = user?.friends?.size ?: 0,
+            notificationsEnabled = notificationsEnabled
+        )
+    }
+
+    fun updateNotificationPreference(enabled: Boolean) {
+        notificationsEnabled = enabled
+    }
+
+    fun getSavedRestaurants(): List<Restaurant> {
+        val userSavedIds = model.getSavedRestaurantIds()
+        return (restaurants() + browseRestaurants())
+            .distinctBy { it.id }
+            .filter { userSavedIds.contains(it.id) }
+    }
+
+    fun toggleSaved(restaurantId: String) {
+        model.toggleSavedRestaurant(restaurantId)
+    }
+
+    fun logout() {
+        model.logout()
+    }
+
+    fun getEditableProfile(): EditableProfile {
+        val user = model.currentUser
+        return EditableProfile(
+            username = user?.username ?: "",
+            email = user?.email ?: "",
+            bio = user?.bio ?: "",
+            preferences = user?.preferences ?: emptyList(),
+            foodRestrictions = user?.foodRestrictions ?: emptyList()
+        )
+    }
+
+    fun updateProfile(
+        username: String,
+        email: String,
+        bio: String,
+        preferences: List<String>,
+        foodRestrictions: List<String>
+    ) {
+        model.updateUserProfile(username, email, bio, preferences, foodRestrictions)
     }
 
     private fun buildFallbackDetail(summary: Restaurant): RestaurantDetail {
@@ -138,17 +170,15 @@ class FakeRepository {
         val imageKey = when (summary.category.lowercase()) {
             "pizza" -> "pizza_home"
             "sushi" -> "beyayenet_home"
-            "burgers" -> "chesse_burger_home"
-            "coffee" -> "coffee_home"
+            "burgers", "fast food" -> "chesse_burger_home"
+            "coffee", "cafe", "drink" -> "coffee_home"
             else -> "local_home"
         }
         return RestaurantDetail(
             restaurantId = summary.id,
             name = summary.name,
             images = listOf(imageKey, "drink_home"),
-            featuredItems = listOf(
-                FeaturedItem("Chef Recommendation", summary.price, "Popular choice from this restaurant"),
-            ),
+            featuredItems = listOf(FeaturedItem("Chef Recommendation", summary.price, "Popular choice from this restaurant")),
             location = RestaurantLocation(
                 city = "Waterloo",
                 address = "${summary.name}, Waterloo",
@@ -186,7 +216,6 @@ class FakeRepository {
         if (containsAny("coffee", "cafe", "latte", "capo", "tea")) labels += "Coffee & Tea"
         if (containsAny("bubble tea", "deerioca", "alley", "milk tea")) labels += "Bubble Tea"
         if (containsAny("dessert", "sweet", "milkshake")) labels += "Desserts"
-
         if (labels.isEmpty()) labels += "Fast Food"
         return labels
     }
@@ -216,13 +245,13 @@ class FakeRepository {
         )
 
         aliases[tag]?.let { return it }
-        val matched = homeTypeCatalog
+        return homeTypeCatalog
             .filter { normalizeTag(it.label).contains(tag) || tag.contains(normalizeTag(it.label)) }
             .map { it.label }
             .toSet()
-        return matched
     }
 
     private fun normalizeTag(tag: String): String =
         tag.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 }
+

@@ -49,6 +49,20 @@ data class HomeFeed(
     val popularDrinks: List<PopularItem>,
 )
 
+data class ProfileData(
+    val name: String,
+    val email: String,
+    val friendCount: Int,
+    val notificationsEnabled: Boolean,
+)
+
+data class EditableProfile(
+    val username: String,
+    val email: String,
+    val bio: String,
+    val preferences: List<String>,
+    val foodRestrictions: List<String>
+)
 
 class Model {
     // --- AUTH STATE ---
@@ -124,4 +138,67 @@ class Model {
         // Returns a new list containing only the reviews that meet the criteria
         return _reviews.filter { it.restaurantName == name }
     }
+
+    /**
+     * Toggles a restaurant's saved state for the current user
+     */
+    fun toggleSavedRestaurant(restaurantId: String) {
+        val user = currentUser ?: return
+        val currentSaved = user.savedRestaurantIds.toMutableList()
+        
+        if (currentSaved.contains(restaurantId)) {
+            currentSaved.remove(restaurantId)
+        } else {
+            currentSaved.add(restaurantId)
+        }
+        
+        // Update current user with new saved list
+        val updatedUser = user.copy(savedRestaurantIds = currentSaved)
+        currentUser = updatedUser
+        
+        // Also update in the users list
+        val index = _users.indexOfFirst { it.id == user.id }
+        if (index != -1) {
+            _users[index] = updatedUser
+        }
+    }
+
+     /**
+     * Gets the list of saved restaurant IDs for the current user
+     */
+    fun getSavedRestaurantIds(): Set<String> {
+        return currentUser?.savedRestaurantIds?.toSet() ?: emptySet()
+    }
+
+    fun logout() {
+        currentUser = null
+        println("User logged out")
+    }
+
+    fun updateUserProfile(
+        username: String,
+        email: String,
+        bio: String,
+        preferences: List<String>,
+        foodRestrictions: List<String>
+    ) {
+        val user = currentUser ?: return
+
+        val updatedUser = user.copy(
+            username = username,
+            email = email,
+            bio = bio,
+            preferences = preferences,
+            foodRestrictions = foodRestrictions
+        )
+
+        currentUser = updatedUser
+
+        // Update in users list
+        val index = _users.indexOfFirst { it.id == user.id }
+        if (index != -1) {
+            _users[index] = updatedUser
+        }
+    }
+
 }

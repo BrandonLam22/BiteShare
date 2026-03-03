@@ -12,7 +12,7 @@ import org.example.biteshare.app.BiteShareTheme
 import org.example.biteshare.domain.Model  // ADD THIS IMPORT
 
 class MainActivity : ComponentActivity() {
-    private val appModel = Model()
+    private val appModel = Model()  // ADD: Create Model once at app level
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -20,7 +20,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BiteShareTheme {
-                AuthGate(model = appModel)
+<<<<<<< HEAD
+                // AppRoot()
+                AuthGate()
+=======
+                AuthGate(model = appModel)  // CHANGED: Pass model to AuthGate
+>>>>>>> 1076ebdff02046c8659e8d335d0b6dda41a52192
             }
         }
     }
@@ -30,6 +35,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppAndroidPreview() {
     BiteShareTheme {
-        AppRoot(model = Model())
+        AppRoot(model = Model())  // CHANGED: Pass model to AppRoot for preview
     }
 }

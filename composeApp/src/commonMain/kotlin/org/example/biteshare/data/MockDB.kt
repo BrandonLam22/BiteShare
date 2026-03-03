@@ -18,13 +18,15 @@ object MockDB {
             id = "user_01",
             username = "Kevin",
             email = "k389zhan@uwaterloo.ca",
-            password = "12345"
+            password = "12345",
+            savedRestaurantIds = listOf("p1", "b1", "bp1")
         ),
         User(
             id = "user_02",
             username = "Steven",
             email = "s38gao@uwaterloo.ca",
-            password = "54321"
+            password = "54321",
+            savedRestaurantIds = listOf("s1", "c1")
         ),
         User(
             id = "user_03",

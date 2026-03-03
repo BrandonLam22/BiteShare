@@ -1,6 +1,7 @@
 package org.example.biteshare.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,9 +23,21 @@ private sealed class AuthScreen {
 }
 
 @Composable
-fun AuthGate() {
-    val model = remember { Model() }
-    var currentScreen by remember { mutableStateOf<AuthScreen>(AuthScreen.Welcome) }
+fun AuthGate(model: Model) {
+    val isLoggedIn = model.currentUser != null
+
+    var currentScreen by remember { mutableStateOf<AuthScreen>(
+        if (isLoggedIn) AuthScreen.Home else AuthScreen.Welcome
+    ) }
+
+    // Update when login state changes
+    LaunchedEffect(isLoggedIn) {
+        println("DEBUG: isLoggedIn = $isLoggedIn, currentScreen = $currentScreen")
+        if (!isLoggedIn && currentScreen is AuthScreen.Home) {
+            println("DEBUG: Logging out - navigating to Welcome")
+            currentScreen = AuthScreen.Welcome
+        }
+    }
 
     when (val screen = currentScreen) {
         is AuthScreen.Welcome -> {
@@ -52,7 +65,7 @@ fun AuthGate() {
             )
         }
         is AuthScreen.Home -> {
-            AppRoot()
+            AppRoot(model = model)
         }
     }
 }

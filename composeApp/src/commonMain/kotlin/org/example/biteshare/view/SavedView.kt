@@ -89,7 +89,7 @@ class SavedView(
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SortPill(
+                /*SortPill(
                     text = "Time",
                     selected = selected == "time",
                     onClick = { onSelect("time") },
@@ -100,11 +100,11 @@ class SavedView(
                     selected = selected == "name",
                     onClick = { onSelect("name") },
                     modifier = Modifier.weight(1f)
-                )
+                )*/
             }
         }
     }
-
+/*
     @Composable
     private fun SortPill(
         text: String,
@@ -130,7 +130,7 @@ class SavedView(
             }
         }
     }
-
+*/
     @Composable
     private fun SavedRestaurantCard(
         category: String,

@@ -56,13 +56,19 @@ private sealed class ProfileRoute {
 
 @Composable
 fun AppRoot(model: Model) {
+    //val model = remember<Model> { Model() }
     val repo = remember { FakeRepository(model) }
     var tab by remember { mutableStateOf(Tab.Home) }
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
+<<<<<<< HEAD
+
+    val homeVm = remember { HomeViewModel(repo) }
+=======
     val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
-    val homeVm = remember(repo) { HomeViewModel(repo) }
+    val homeVm = remember { HomeViewModel() }
+>>>>>>> 1076ebdff02046c8659e8d335d0b6dda41a52192
     val browseVm = remember { BrowseViewModel(repo) }
     val pickVm = remember { PickForMeViewModel(repo) }
     val recVm = remember { RecommendsViewModel(repo) }
@@ -171,19 +177,21 @@ fun AppRoot(model: Model) {
                                     onSavedRestaurants = { profileRoute = ProfileRoute.Saved },
                                     onPrivacy = { profileRoute = ProfileRoute.Privacy },
                                     onHelp = { profileRoute = ProfileRoute.Help },
-                                    onLogout = {},
-                                    onEditProfile = { profileRoute = ProfileRoute.EditProfile }
+                                            onLogout = {
+                                        // Logout is handled - AuthGate will detect and navigate
+                                    },
+                                    onEditProfile = {profileRoute = ProfileRoute.EditProfile}
                                 )
                             }
                             view.Content()
                         }
-                        ProfileRoute.EditProfile -> {
+                        ProfileRoute.EditProfile -> {  // ADD THIS CASE
                             val view = remember {
                                 EditProfileView(
                                     vm = editProfileVm,
                                     onBack = {
                                         profileRoute = ProfileRoute.Main
-                                        profileVm.loadProfile()
+                                        profileVm.loadProfile() // Refresh profile data
                                     }
                                 )
                             }
@@ -220,7 +228,7 @@ fun AppRoot(model: Model) {
                 }
                 Tab.Pick -> {
                     Box(Modifier.padding(inner)) {
-                        when (pickRoute) {
+                        when (val r = pickRoute) {
                             PickRoute.Main -> {
                                 val view = remember {
                                     PickForMeView(
@@ -229,21 +237,21 @@ fun AppRoot(model: Model) {
                                             pickRoute = PickRoute.Recommends(pickVm.buildPickContext())
                                         }
                                     )
-                                }
-                                view.Content()
                             }
-                            is PickRoute.Recommends -> {
-                                val view = remember {
-                                    RecommendsView(
-                                        vm = recVm,
-                                        onBack = { pickRoute = PickRoute.Main }
-                                    )
-                                }
-                                view.Content()
+                            view.Content()
+                        }
+                        is PickRoute.Recommends -> {
+                            val view = remember {
+                                RecommendsView(
+                                    vm = recVm,
+                                    onBack = { pickRoute = PickRoute.Main }
+                                )
                             }
+                            view.Content()
                         }
                     }
                 }
+            }
             }
         }
     }

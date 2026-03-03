@@ -17,3 +17,4 @@ class SignupViewModel(private val model: Model) {
         return model.signup(username, password, email)
     }
 }
+

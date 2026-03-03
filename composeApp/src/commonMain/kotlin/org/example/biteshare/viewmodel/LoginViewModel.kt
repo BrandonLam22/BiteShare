@@ -15,6 +15,7 @@ class LoginViewModel(private val model: Model) {
     // The View only knows the user clicked a button; the ViewModel decides what happens
     fun onLoginClicked(): Boolean {
         if (username.isBlank() || password.isBlank()) return false
-            return model.login(username, password)
+        return model.login(username, password)
     }
 }
+
