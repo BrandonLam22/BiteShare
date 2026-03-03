@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import org.example.biteshare.app.AppRoot
+import org.example.biteshare.app.AuthGate
 import org.example.biteshare.app.BiteShareTheme
 
 class MainActivity : ComponentActivity() {
@@ -16,7 +17,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BiteShareTheme {
-                AppRoot()
+                // AppRoot()
+                AuthGate()
             }
         }
     }

@@ -28,9 +28,11 @@ import org.example.biteshare.components.WelcomeScreenImage
 import org.example.biteshare.components.TextButton
 import org.example.biteshare.viewmodel.LoginViewModel
 
-@Preview
+// @Preview
 @Composable
-fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
+fun LoginView(viewModel: LoginViewModel,
+              onLoginSuccess: () -> Unit,
+              onNavigateToSignup: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize() // take up the whole screen
@@ -109,7 +111,11 @@ fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
 
             LoginSignupButton(
                 text = "Login",
-                onClick = { viewModel.onLoginClicked() } // View calls function in ViewModel
+                onClick = {
+                    if (viewModel.onLoginClicked()) { // View calls function in ViewModel
+                        onLoginSuccess()
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(25.dp))
@@ -126,7 +132,7 @@ fun LoginView(viewModel: LoginViewModel = LoginViewModel()) {
                 fontSize = 14.sp
             )
 
-            TextButton(text = "Sign Up", onClick = { /* We will navigate to the Sign Up screen here */ })
+            TextButton(text = "Sign Up", onClick = { onNavigateToSignup() })
         }
 
     }

@@ -23,9 +23,11 @@ import org.example.biteshare.components.LoginSignupButton
 import org.example.biteshare.components.WelcomeScreenImage
 import org.example.biteshare.viewmodel.WelcomeViewModel
 
-@Preview
+// @Preview
 @Composable
-fun WelcomeView(viewModel: WelcomeViewModel = WelcomeViewModel()) {
+fun WelcomeView(viewModel: WelcomeViewModel,
+                onNavigateToLogin: () -> Unit,
+                onNavigateToSignup: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize() // Take up the whole screen
@@ -55,13 +57,13 @@ fun WelcomeView(viewModel: WelcomeViewModel = WelcomeViewModel()) {
 
             LoginSignupButton(
                 text = "Login",
-                onClick = { viewModel.onLoginClicked() } // call onLoginClicked function in ViewModel
+                onClick = { viewModel.onLoginClicked(onNavigateToLogin) } // call onLoginClicked function in ViewModel
             )
 
             Spacer(modifier = Modifier.height(16.dp)) // Adds a little gap between the buttons
 
             OutlinedButton(
-                onClick = { viewModel.onSignupClicked() }, // call onSignupClicked function in ViewModel
+                onClick = { viewModel.onSignupClicked(onNavigateToSignup) }, // call onSignupClicked function in ViewModel
                 modifier = Modifier.fillMaxWidth(0.9f),
                 shape = RoundedCornerShape(6.dp), // sharper corners
                 border = BorderStroke(1.dp, Color(0xFFFF8C00)) // add a border around a component

@@ -3,18 +3,17 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.example.biteshare.domain.Model
 
-class SignupViewModel {
+class SignupViewModel(private val model: Model) {
     // Localized data for the signup view
     var username by mutableStateOf("")
     var password by mutableStateOf("")
     var email by mutableStateOf("")
 
-    // Process user intention
-    fun onSignupClicked() {
-        if (username.isNotBlank() && email.contains("@")) {
-            println("ViewModel Logic: Creating account for $username with $email")
-            // Future step: send data down to the Domain layer
-        }
+    // Returns true if signup succeeded (user created and logged in)
+    fun onSignupClicked(): Boolean {
+        if (username.isBlank() || password.isBlank() || !email.contains("@")) return false
+        return model.signup(username, password, email)
     }
 }
