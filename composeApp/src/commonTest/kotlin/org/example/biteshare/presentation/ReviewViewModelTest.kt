@@ -1,5 +1,6 @@
 package org.example.biteshare.presentation
 
+import org.example.biteshare.domain.Model
 import org.example.biteshare.viewmodel.ReviewViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,7 +16,7 @@ class ReviewViewModelTest {
     @Test
     fun toggleTagAddsTagWhenNotSelected() {
         // Arrange
-        val vm = ReviewViewModel()
+        val vm = ReviewViewModel(Model())
         val tag = "Good Taste"
 
         // Act
@@ -28,7 +29,7 @@ class ReviewViewModelTest {
     @Test
     fun toggleTagRemovesTagWhenAlreadySelected() {
         // Arrange
-        val vm = ReviewViewModel()
+        val vm = ReviewViewModel(Model())
         val tag = "Economical"
         vm.toggleTag(tag)
         assertTrue(vm.selectedTags.contains(tag))
@@ -43,7 +44,7 @@ class ReviewViewModelTest {
     @Test
     fun updateReviewTextAcceptsUpTo50Characters() {
         // Arrange
-        val vm = ReviewViewModel()
+        val vm = ReviewViewModel(Model())
         val text = "a".repeat(50)
 
         // Act
@@ -57,7 +58,7 @@ class ReviewViewModelTest {
     @Test
     fun updateReviewTextIgnoresTextOver50Characters() {
         // Arrange
-        val vm = ReviewViewModel()
+        val vm = ReviewViewModel(Model())
         val validText = "a".repeat(50)
         vm.updateReviewText(validText)
 
@@ -72,7 +73,7 @@ class ReviewViewModelTest {
     @Test
     fun availableTagsContainsExpectedTags() {
         // Arrange & Act
-        val vm = ReviewViewModel()
+        val vm = ReviewViewModel(Model())
 
         // Assert
         assertTrue(vm.availableTags.contains("Good Taste"))
