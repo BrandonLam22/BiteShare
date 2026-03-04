@@ -3,7 +3,10 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.*
+import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.domain.PickContext
+import org.example.biteshare.domain.PickModel
+import org.example.biteshare.domain.Restaurant
 
 data class RecommendsUiState(
     val title: String = "Recommends",
@@ -11,13 +14,25 @@ data class RecommendsUiState(
 )
 
 class RecommendsViewModel(
-    private val repo: FakeRepository,
+    private val model: PickModel,
 ) {
+    constructor(repo: FakeRepository) : this(PickModel(repo))
+
     var uiState by mutableStateOf(RecommendsUiState())
         private set
 
     fun load(context: PickContext) {
-        uiState = uiState.copy(items = repo.recommend(context))
+        loadItems(model.recommend(context))
+    }
+
+    fun loadItems(
+        items: List<Restaurant>,
+        title: String = "Recommends",
+    ) {
+        uiState = uiState.copy(
+            title = title,
+            items = items,
+        )
     }
 
     fun toggleSaved(restaurantId: String) {

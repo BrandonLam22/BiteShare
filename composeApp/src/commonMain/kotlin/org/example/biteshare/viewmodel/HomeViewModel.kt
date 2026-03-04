@@ -3,17 +3,22 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.CategoryItem
-import org.example.biteshare.model.PopularItem
+import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.domain.CategoryItem
+import org.example.biteshare.domain.PopularItem
 
 data class HomeUiState(
-    val greeting: String = "Hi, John",
+    val greeting: String = "Hi, Kevin",
     val categories: List<CategoryItem> = emptyList(),
     val popularDishes: List<PopularItem> = emptyList(),
     val popularDrinks: List<PopularItem> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
 )
 
-class HomeViewModel {
+class HomeViewModel(
+    private val repo: FakeRepository,
+) {
     var uiState by mutableStateOf(HomeUiState())
         private set
 
@@ -21,25 +26,28 @@ class HomeViewModel {
         loadHome()
     }
 
-    private fun loadHome() {
-        uiState = HomeUiState(
-            greeting = "Hi, John",
-            categories = listOf(
-                CategoryItem("local", "Local"),
-                CategoryItem("fastfood", "Fast Food"),
-                CategoryItem("drink", "Drink"),
-                CategoryItem("breakfast", "Breakfast"),
-            ),
-            popularDishes = listOf(
-                PopularItem("d1", "Chess Burger", "Light Restaurant"),
-                PopularItem("d2", "Pizza", "Joe's Pizza"),
-                PopularItem("d3", "Beyayenet", "Abebe Hot"),
-            ),
-            popularDrinks = listOf(
-                PopularItem("dr1", "Coffee", "Hope Café"),
-                PopularItem("dr2", "Milkshake", "Love Café"),
-                PopularItem("dr3", "Capo chino", "Hope Café"),
-            ),
-        )
+    fun loadHome(userName: String = "John") {
+        uiState = uiState.copy(isLoading = true, errorMessage = null)
+        runCatching {
+            repo.getHomeFeed(userName)
+        }.onSuccess { feed ->
+            uiState = uiState.copy(
+                greeting = feed.greeting,
+                categories = feed.categories,
+                popularDishes = feed.popularDishes,
+                popularDrinks = feed.popularDrinks,
+                isLoading = false,
+                errorMessage = null,
+            )
+        }.onFailure { t ->
+            uiState = uiState.copy(
+                isLoading = false,
+                errorMessage = t.message ?: "Failed to load homepage data.",
+            )
+        }
+    }
+
+    fun retryLoad() {
+        loadHome()
     }
 }

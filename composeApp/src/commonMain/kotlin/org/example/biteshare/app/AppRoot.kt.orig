@@ -1,0 +1,269 @@
+package org.example.biteshare.app
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.domain.PickContext
+import org.example.biteshare.view.PickForMeView
+import org.example.biteshare.view.RecommendsView
+import org.example.biteshare.view.ProfileView
+import org.example.biteshare.view.SavedView
+import org.example.biteshare.view.PrivacyView
+import org.example.biteshare.view.HelpView
+import org.example.biteshare.view.BrowseView
+import org.example.biteshare.view.DetailView
+import org.example.biteshare.view.HomeView
+import org.example.biteshare.view.ReviewView
+import org.example.biteshare.viewmodel.PickForMeViewModel
+import org.example.biteshare.viewmodel.RecommendsViewModel
+import org.example.biteshare.viewmodel.ProfileViewModel
+import org.example.biteshare.viewmodel.SavedViewModel
+import org.example.biteshare.viewmodel.PrivacyViewModel
+import org.example.biteshare.viewmodel.HelpViewModel
+import org.example.biteshare.viewmodel.BrowseViewModel
+import org.example.biteshare.viewmodel.DetailViewModel
+import org.example.biteshare.viewmodel.HomeViewModel
+import org.example.biteshare.viewmodel.ReviewViewModel
+import org.example.biteshare.domain.Model
+import org.example.biteshare.view.EditProfileView
+import org.example.biteshare.viewmodel.EditProfileViewModel
+
+private enum class Tab { Home, Review, Pick, Profile }
+
+private sealed class HomeRoute {
+    data object Main : HomeRoute()
+    data object Browse : HomeRoute()
+    data class Detail(val restaurantId: String) : HomeRoute()
+}
+
+private sealed class PickRoute {
+    data object Main : PickRoute()
+    data class Recommends(val ctx: PickContext) : PickRoute()
+}
+
+private sealed class ProfileRoute {
+    data object Main : ProfileRoute()
+    data object Saved : ProfileRoute()
+    data object Privacy : ProfileRoute()
+    data object Help : ProfileRoute()
+
+    data object EditProfile : ProfileRoute()
+}
+
+@Composable
+fun AppRoot(model: Model) {
+    //val model = remember<Model> { Model() }
+    val repo = remember { FakeRepository(model) }
+    var tab by remember { mutableStateOf(Tab.Home) }
+    var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
+    var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
+    var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
+<<<<<<< HEAD
+
+    val homeVm = remember { HomeViewModel(repo) }
+=======
+    val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
+    val homeVm = remember { HomeViewModel() }
+>>>>>>> 1076ebdff02046c8659e8d335d0b6dda41a52192
+    val browseVm = remember { BrowseViewModel(repo) }
+    val pickVm = remember { PickForMeViewModel(repo) }
+    val recVm = remember { RecommendsViewModel(repo) }
+    val profileVm = remember { ProfileViewModel(repo) }
+    val savedVm = remember { SavedViewModel(repo) }
+    val privacyVm = remember { PrivacyViewModel(repo) }
+    val helpVm = remember { HelpViewModel(repo) }
+    // Review Screen
+    val reviewVM = remember { ReviewViewModel() }
+
+    LaunchedEffect(pickRoute) {
+        if (pickRoute is PickRoute.Recommends) {
+            recVm.load((pickRoute as PickRoute.Recommends).ctx)
+        }
+    }
+
+    BiteShareTheme {
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = tab == Tab.Home,
+                        onClick = { tab = Tab.Home },
+                        icon = { Text("🏠") },
+                        label = { Text("Home") }
+                    )
+                    NavigationBarItem(
+                        selected = tab == Tab.Review,
+                        onClick = { tab = Tab.Review },
+                        icon = { Text("✍️") },
+                        label = { Text("Review") }
+                    )
+                    NavigationBarItem(
+                        selected = tab == Tab.Pick,
+                        onClick = { tab = Tab.Pick },
+                        icon = { Text("🎯") },
+                        label = { Text("Pick") }
+                    )
+                    NavigationBarItem(
+                        selected = tab == Tab.Profile,
+                        onClick = {
+                            tab = Tab.Profile
+                            profileRoute = ProfileRoute.Main
+                        },
+                        icon = { Text("👤") },
+                        label = { Text("Profile") }
+                    )
+                }
+            }
+        ) { inner ->
+            when (tab) {
+                Tab.Home -> {
+                    Box(Modifier.padding(inner)) {
+                        when (homeRoute) {
+                            HomeRoute.Main -> {
+                                val view = remember {
+                                    HomeView(
+                                        vm = homeVm,
+                                        onSearchClick = {
+                                            browseVm.clearTagFilter()
+                                            homeRoute = HomeRoute.Browse
+                                        },
+                                        onTagClick = { tag ->
+                                            browseVm.applyTagFilter(tag)
+                                            homeRoute = HomeRoute.Browse
+                                        }
+                                    )
+                                }
+                                view.Content()
+                            }
+                            HomeRoute.Browse -> {
+                                val view = remember {
+                                    BrowseView(
+                                        vm = browseVm,
+                                        onBack = { homeRoute = HomeRoute.Main },
+                                        onRestaurantClick = { id -> homeRoute = HomeRoute.Detail(id) }
+                                    )
+                                }
+                                view.Content()
+                            }
+                            is HomeRoute.Detail -> {
+                                val detailVm = remember((homeRoute as HomeRoute.Detail).restaurantId) {
+                                    DetailViewModel(repo, (homeRoute as HomeRoute.Detail).restaurantId)
+                                }
+                                val view = remember(detailVm) {
+                                    DetailView(vm = detailVm, onBack = { homeRoute = HomeRoute.Browse })
+                                }
+                                view.Content()
+                            }
+                        }
+                    }
+                }
+                Tab.Review -> {
+                    // we still use a box to handle the 'inner' padding from the Scaffold
+                    Box(modifier = Modifier.padding(inner)) {
+                        // call the function directly
+                        ReviewView(reviewVM)
+                    }
+                }
+                Tab.Profile -> {
+                    when (profileRoute) {
+                        ProfileRoute.Main -> {
+                            val view = remember {
+                                ProfileView(
+                                    vm = profileVm,
+                                    onSavedRestaurants = { profileRoute = ProfileRoute.Saved },
+                                    onPrivacy = { profileRoute = ProfileRoute.Privacy },
+                                    onHelp = { profileRoute = ProfileRoute.Help },
+                                            onLogout = {
+                                        // Logout is handled - AuthGate will detect and navigate
+                                    },
+                                    onEditProfile = {profileRoute = ProfileRoute.EditProfile}
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.EditProfile -> {  // ADD THIS CASE
+                            val view = remember {
+                                EditProfileView(
+                                    vm = editProfileVm,
+                                    onBack = {
+                                        profileRoute = ProfileRoute.Main
+                                        profileVm.loadProfile() // Refresh profile data
+                                    }
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.Saved -> {
+                            val view = remember {
+                                SavedView(
+                                    vm = savedVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.Privacy -> {
+                            val view = remember {
+                                PrivacyView(
+                                    vm = privacyVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                        ProfileRoute.Help -> {
+                            val view = remember {
+                                HelpView(
+                                    vm = helpVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                    }
+                }
+                Tab.Pick -> {
+                    Box(Modifier.padding(inner)) {
+                        when (val r = pickRoute) {
+                            PickRoute.Main -> {
+                                val view = remember {
+                                    PickForMeView(
+                                        vm = pickVm,
+                                        onGo = {
+                                            pickRoute = PickRoute.Recommends(pickVm.buildPickContext())
+                                        }
+                                    )
+                            }
+                            view.Content()
+                        }
+                        is PickRoute.Recommends -> {
+                            val view = remember {
+                                RecommendsView(
+                                    vm = recVm,
+                                    onBack = { pickRoute = PickRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
+                    }
+                }
+            }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(24.dp)
+        )
+    }
+}

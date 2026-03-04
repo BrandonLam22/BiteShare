@@ -3,19 +3,26 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.FakeRepository
-import org.example.biteshare.model.Restaurant
+import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.Review
 
 enum class MealTab { Lunch, Dinner, Brunch }
 
 data class DetailUiState(
     val restaurant: Restaurant? = null,
+    val restaurantDetail: RestaurantDetail? = null,
     val selectedMeal: MealTab = MealTab.Lunch,
     val reviewCount: Int = 120,
     val location: String = "Addis Ababa",
     val priceRange: String = "$$$",
     val distance: String = "2.5 miles away",
     val timeSlots: List<String> = emptyList(),
+    val selectedTimeSlot: String? = null,
+    val averageReviewScore: Double = 0.0,
+    val reviewHighlights: List<Review> = emptyList(),
+    val popularReviewTags: List<String> = emptyList(),
 )
 
 class DetailViewModel(
@@ -31,24 +38,64 @@ class DetailViewModel(
 
     private fun loadDetail(restaurantId: String) {
         val restaurant = repo.getRestaurantById(restaurantId)
+        val detail = repo.getRestaurantDetailById(restaurantId)
+        val initialMeal = MealTab.Lunch
+        val initialSlots = slotsForMeal(initialMeal)
+        val reviews = detail?.reviews.orEmpty()
         uiState = uiState.copy(
             restaurant = restaurant,
-            timeSlots = listOf(
-                "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM",
-                "2:00 PM", "2:30 PM", "3:00 PM", "6:00 PM", "6:30 PM", "7:00 PM"
-            ),
+            restaurantDetail = detail,
+            reviewCount = reviews.size,
+            location = detail?.location?.city ?: "Addis Ababa",
+            priceRange = detail?.priceRange ?: "$$$",
+            distance = detail?.location?.distance ?: "2.5 miles away",
+            selectedMeal = initialMeal,
+            timeSlots = initialSlots,
+            selectedTimeSlot = initialSlots.firstOrNull(),
+            averageReviewScore = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0,
+            reviewHighlights = reviews.take(3),
+            popularReviewTags = reviews
+                .flatMap { it.tags }
+                .groupingBy { it }
+                .eachCount()
+                .toList()
+                .sortedByDescending { (_, count) -> count }
+                .take(4)
+                .map { (tag, _) -> tag },
         )
     }
 
     fun selectMeal(tab: MealTab) {
-        uiState = uiState.copy(selectedMeal = tab)
+        val slots = slotsForMeal(tab)
+        uiState = uiState.copy(
+            selectedMeal = tab,
+            timeSlots = slots,
+            selectedTimeSlot = slots.firstOrNull(),
+        )
+    }
+
+    fun selectTimeSlot(slot: String) {
+        uiState = uiState.copy(selectedTimeSlot = slot)
     }
 
     fun toggleSaved() {
         uiState.restaurant?.let { r ->
-            uiState = uiState.copy(
-                restaurant = r.copy(isSaved = !r.isSaved)
-            )
+            repo.toggleSaved(r.id)
+            val refreshed = repo.getRestaurantById(r.id)
+            val next = when {
+                refreshed == null -> r.copy(isSaved = !r.isSaved)
+                refreshed.isSaved == r.isSaved -> refreshed.copy(isSaved = !r.isSaved)
+                else -> refreshed
+            }
+            uiState = uiState.copy(restaurant = next)
+        }
+    }
+
+    private fun slotsForMeal(meal: MealTab): List<String> {
+        return when (meal) {
+            MealTab.Lunch -> listOf("12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM")
+            MealTab.Dinner -> listOf("5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM")
+            MealTab.Brunch -> listOf("9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM")
         }
     }
 }

@@ -3,10 +3,12 @@ package org.example.biteshare.view
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.biteshare.model.PickMode
+import org.example.biteshare.domain.BudgetFilter
+import org.example.biteshare.domain.CuisineFilter
+import org.example.biteshare.domain.PickMode
 import org.example.biteshare.viewmodel.PickForMeViewModel
 
 class PickForMeView(
@@ -24,10 +28,12 @@ class PickForMeView(
     @Composable
     fun Content() {
         val s = vm.uiState
+        val scrollState = rememberScrollState()
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(Modifier.height(18.dp))
@@ -66,10 +72,95 @@ class PickForMeView(
 
                 Spacer(Modifier.height(26.dp))
             } else {
-                Spacer(Modifier.height(60.dp))
+                Spacer(Modifier.height(8.dp))
             }
 
-            Spacer(Modifier.weight(1f))
+            Text(
+                text = "Advanced Filters",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(12.dp))
+
+            FilterGroupTitle("Location")
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(s.locations) { location ->
+                    FilterChip(
+                        selected = s.filters.location == location,
+                        onClick = { vm.setLocation(location) },
+                        label = { Text(location) }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            FilterGroupTitle("Budget")
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(BudgetFilter.entries.toList()) { budget ->
+                    FilterChip(
+                        selected = s.filters.budget == budget,
+                        onClick = { vm.setBudget(budget) },
+                        label = { Text(budget.label) }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            FilterGroupTitle("Food Type")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CuisineFilter.entries.toList().chunked(4).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowItems.forEach { cuisine ->
+                            FilterChip(
+                                selected = s.filters.cuisine == cuisine,
+                                onClick = { vm.setCuisine(cuisine) },
+                                label = { Text(cuisine.label) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Open now only",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Switch(
+                    checked = s.filters.openNowOnly,
+                    onCheckedChange = vm::setOpenNowOnly
+                )
+            }
+
+            Text(
+                text = "Minimum rating: ${s.filters.minRating}/10",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = s.filters.minRating.toFloat(),
+                onValueChange = { vm.setMinRating(it.toDouble()) },
+                valueRange = 0f..10f,
+                steps = 19
+            )
+
+            Text(
+                text = "${s.resultPreviewCount} matches based on your filters",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier
@@ -85,6 +176,16 @@ class PickForMeView(
                 Text("Go!", style = MaterialTheme.typography.titleMedium)
             }
         }
+    }
+
+    @Composable
+    private fun FilterGroupTitle(title: String) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(6.dp))
     }
 
     @Composable

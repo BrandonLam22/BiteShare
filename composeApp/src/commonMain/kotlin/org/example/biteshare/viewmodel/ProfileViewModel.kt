@@ -3,18 +3,17 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.model.FakeRepository
+import org.example.biteshare.data.FakeRepository
 
 data class ProfileUiState(
     val name: String = "",
     val email: String = "",
-    val followingCount: Int = 0,
-    val followersCount: Int = 0,
+    val friendCount: Int = 0,
     val notificationsEnabled: Boolean = false,
 )
 
 class ProfileViewModel(
-    private val repo: FakeRepository? = null,
+    private val repo: FakeRepository,  // CHANGED: Remove ? = null, make it required
 ) {
     var uiState by mutableStateOf(ProfileUiState())
         private set
@@ -23,25 +22,23 @@ class ProfileViewModel(
         loadProfile()
     }
 
-    private fun loadProfile() {
-        // TODO: Load from repository/data source
+    fun loadProfile() {
+        val profileData = repo.getProfile()  // CHANGED: Get from repository
         uiState = ProfileUiState(
-            name = "John Cena",
-            email = "johncena@gmail.com",
-            followingCount = 28,
-            followersCount = 53,
-            notificationsEnabled = true
+            name = profileData.name,
+            email = profileData.email,
+            friendCount = profileData.friendCount,
+            notificationsEnabled = profileData.notificationsEnabled
         )
     }
 
     fun toggleNotifications() {
-        uiState = uiState.copy(
-            notificationsEnabled = !uiState.notificationsEnabled
-        )
-        // TODO: Persist notification preference
+        val newValue = !uiState.notificationsEnabled  // CHANGED: Store in variable
+        uiState = uiState.copy(notificationsEnabled = newValue)
+        repo.updateNotificationPreference(newValue)  // CHANGED: Persist to repository
     }
 
     fun logout() {
-        // TODO: Clear user session and navigate to login
+        repo.logout()
     }
 }

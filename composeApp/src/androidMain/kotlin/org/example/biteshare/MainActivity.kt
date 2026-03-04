@@ -7,16 +7,20 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import org.example.biteshare.app.AppRoot
+import org.example.biteshare.app.AuthGate
 import org.example.biteshare.app.BiteShareTheme
+import org.example.biteshare.domain.Model  // ADD THIS IMPORT
 
 class MainActivity : ComponentActivity() {
+    private val appModel = Model()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         setContent {
             BiteShareTheme {
-                AppRoot()
+                AuthGate(model = appModel)
             }
         }
     }
@@ -26,6 +30,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppAndroidPreview() {
     BiteShareTheme {
-        AppRoot()
+        AppRoot(model = Model())
     }
 }

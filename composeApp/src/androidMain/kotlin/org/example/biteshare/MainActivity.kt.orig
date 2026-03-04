@@ -1,0 +1,40 @@
+package org.example.biteshare
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import org.example.biteshare.app.AppRoot
+import org.example.biteshare.app.AuthGate
+import org.example.biteshare.app.BiteShareTheme
+import org.example.biteshare.domain.Model  // ADD THIS IMPORT
+
+class MainActivity : ComponentActivity() {
+    private val appModel = Model()  // ADD: Create Model once at app level
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            BiteShareTheme {
+<<<<<<< HEAD
+                // AppRoot()
+                AuthGate()
+=======
+                AuthGate(model = appModel)  // CHANGED: Pass model to AuthGate
+>>>>>>> 1076ebdff02046c8659e8d335d0b6dda41a52192
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun AppAndroidPreview() {
+    BiteShareTheme {
+        AppRoot(model = Model())  // CHANGED: Pass model to AppRoot for preview
+    }
+}

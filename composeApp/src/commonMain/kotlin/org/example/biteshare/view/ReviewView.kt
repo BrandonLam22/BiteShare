@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -29,11 +31,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.biteshare.components.LoginSignupButton
+import org.example.biteshare.domain.Model
 import org.example.biteshare.viewmodel.ReviewViewModel
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 
 @Preview
 @Composable
-fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
+fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
     // These would move to ReviewViewModel later for proper MVVM
 //    var restaurantName by remember { mutableStateOf("") }
 //    var reviewText by remember { mutableStateOf("") }
@@ -45,7 +50,7 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -56,10 +61,10 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
             fontSize = 40.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .padding(top = 40.dp)
+                .padding(top = 24.dp)
         )
 
-        Spacer(modifier = Modifier.height(50.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // SECTION 2: RESTAURANT SEARCH
         OutlinedTextField(
@@ -80,7 +85,43 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
             )
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // SECTION 2b: RATING SLIDER (1-10)
+        Text(
+            text = "Rating",
+            color = Color(0xFFFF7A00),
+            fontSize = 18.sp,
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = 20.dp, bottom = 4.dp)
+        )
+
+        Text(
+            text = "${viewModel.rating} / 10",
+            color = Color(0xFFFF8C00),
+            fontSize = 16.sp,
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = 20.dp, bottom = 8.dp)
+        )
+
+        Slider(
+            value = viewModel.rating.toFloat(),
+            onValueChange = { viewModel.rating = it.toInt().coerceIn(1, 10) },
+            valueRange = 1f..10f,
+            steps = 8, // 1–10 gives 9 steps; steps = 8 for 9 segments
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(horizontal = 16.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFFFF7A00),
+                activeTrackColor = Color(0xFFFF7A00),
+                inactiveTrackColor = Color(0xFFFF8C00).copy(alpha = 0.3f),
+            )
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         // SECTION 3: TAG SELECTION
         Text(
@@ -101,7 +142,7 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
             }
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // SECTION 4: ONE LINE REVIEW
         Text(
@@ -139,11 +180,14 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
             modifier = Modifier.align(Alignment.End).padding(end = 25.dp)
         )
 
-        Spacer(modifier = Modifier.height(60.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         LoginSignupButton(
             text = "Post",
-            onClick = { }
+            onClick = {
+                // Trigger the onPostClicked() method to send data to Model
+                viewModel.onPostClicked()
+            }
         )
 
     }
