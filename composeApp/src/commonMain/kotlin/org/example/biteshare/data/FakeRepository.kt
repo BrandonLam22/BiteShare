@@ -53,10 +53,14 @@ class FakeRepository(
         }
     }
 
-    fun getRestaurantById(id: String): Restaurant? =
-        (restaurants() + browseRestaurants())
+    fun getRestaurantById(id: String): Restaurant? {
+        val userSavedIds = model.getSavedRestaurantIds()
+
+        return (restaurants() + browseRestaurants())
             .distinctBy { it.id }
             .find { it.id == id }
+            ?.copy(isSaved = userSavedIds.contains(id))
+    }
 
     fun getHomeFeed(userName: String = "John"): HomeFeed {
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
@@ -272,4 +276,8 @@ class FakeRepository(
 
     private fun normalizeTag(tag: String): String =
         tag.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
+
+    fun getFriends(): List<Friend> {
+        return model.currentUser?.friends ?: emptyList()
+    }
 }

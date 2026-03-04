@@ -19,6 +19,7 @@ class ProfileView(
     private val onHelp: () -> Unit,
     private val onLogout: () -> Unit,
     private val onEditProfile: () -> Unit,
+    private val onFriendsList: () -> Unit,
 ) {
 
     @Composable
@@ -96,7 +97,8 @@ class ProfileView(
                 StatColumn(
                     count = s.friendCount.toString(),
                     label = "Friends",
-                    modifier = Modifier.weight(0.7f)
+                    modifier = Modifier.weight(0.7f),
+                    onClick = onFriendsList
                 )
                 /*Spacer(Modifier.width(12.dp))
                 StatColumn(
@@ -168,11 +170,12 @@ class ProfileView(
         }
     }
 
-    @Composable
+    /*@Composable
     private fun StatColumn(
         count: String,
         label: String,
         modifier: Modifier = Modifier,
+        onClick: (() -> Unit)? = null,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -188,6 +191,41 @@ class ProfileView(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }*/
+
+    @Composable
+    private fun StatColumn(
+        count: String,
+        label: String,
+        modifier: Modifier = Modifier,
+        onClick: (() -> Unit)? = null,
+    ) {
+        Surface(
+            onClick = onClick ?: {},  // Surface handles clicks better
+            modifier = modifier,
+            shape = RoundedCornerShape(8.dp),
+            color = if (onClick != null) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+            ) {
+                Text(
+                    text = count,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 

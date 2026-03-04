@@ -22,6 +22,10 @@ class SavedViewModel(
     init {
         loadSavedRestaurants()
     }
+    fun refresh() {  // ADD THIS
+        loadSavedRestaurants()
+    }
+
 
     private fun loadSavedRestaurants() {
         val restaurants = repo.getSavedRestaurants()  // CHANGED: Get from repository

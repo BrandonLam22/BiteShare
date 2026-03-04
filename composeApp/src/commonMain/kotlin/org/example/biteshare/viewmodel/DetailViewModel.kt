@@ -80,8 +80,10 @@ class DetailViewModel(
 
     fun toggleSaved() {
         uiState.restaurant?.let { r ->
+            repo.toggleSaved(r.id)
+            val updatedRestaurant = repo.getRestaurantById(r.id)
             uiState = uiState.copy(
-                restaurant = r.copy(isSaved = !r.isSaved)
+                restaurant = updatedRestaurant
             )
         }
     }

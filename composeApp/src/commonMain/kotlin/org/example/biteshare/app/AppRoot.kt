@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
@@ -21,6 +22,7 @@ import org.example.biteshare.domain.PickModel
 import org.example.biteshare.view.BrowseView
 import org.example.biteshare.view.DetailView
 import org.example.biteshare.view.EditProfileView
+import org.example.biteshare.view.FriendsListView
 import org.example.biteshare.view.HelpView
 import org.example.biteshare.view.HomeView
 import org.example.biteshare.view.PickForMeView
@@ -33,6 +35,7 @@ import org.example.biteshare.view.VoteWithFriendsView
 import org.example.biteshare.viewmodel.BrowseViewModel
 import org.example.biteshare.viewmodel.DetailViewModel
 import org.example.biteshare.viewmodel.EditProfileViewModel
+import org.example.biteshare.viewmodel.FriendsListViewModel
 import org.example.biteshare.viewmodel.HelpViewModel
 import org.example.biteshare.viewmodel.HomeViewModel
 import org.example.biteshare.viewmodel.PickForMeViewModel
@@ -64,6 +67,7 @@ private sealed class ProfileRoute {
     data object Privacy : ProfileRoute()
     data object Help : ProfileRoute()
     data object EditProfile : ProfileRoute()
+    data object FriendsList : ProfileRoute()
 }
 
 @Composable
@@ -86,6 +90,8 @@ fun AppRoot(model: Model) {
     val helpVm = remember(repo) { HelpViewModel(repo) }
     val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
     val reviewVm = remember { ReviewViewModel() }
+    val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
+
 
     Scaffold(
         bottomBar = {
@@ -236,7 +242,8 @@ fun AppRoot(model: Model) {
                                 onPrivacy = { profileRoute = ProfileRoute.Privacy },
                                 onHelp = { profileRoute = ProfileRoute.Help },
                                 onLogout = {},
-                                onEditProfile = { profileRoute = ProfileRoute.EditProfile }
+                                onEditProfile = { profileRoute = ProfileRoute.EditProfile },
+                                onFriendsList = { profileRoute = ProfileRoute.FriendsList }
                             ).Content()
                         }
 
@@ -249,12 +256,30 @@ fun AppRoot(model: Model) {
                                 }
                             ).Content()
                         }
+                        ProfileRoute.FriendsList -> {
+                            val view = remember {
+                                FriendsListView(
+                                    vm = friendsListVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
+                        }
 
                         ProfileRoute.Saved -> {
-                            SavedView(
-                                vm = savedVm,
-                                onBack = { profileRoute = ProfileRoute.Main }
-                            ).Content()
+                            val view = remember {
+                                SavedView(
+                                    vm = savedVm,
+                                    onBack = {
+                                        profileRoute = ProfileRoute.Main
+                                    }
+                                )
+                            }
+                            LaunchedEffect(Unit) {
+                                savedVm.refresh()
+                            }
+
+                            view.Content()
                         }
 
                         ProfileRoute.Privacy -> {
