@@ -31,13 +31,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.biteshare.components.LoginSignupButton
+import org.example.biteshare.domain.Model
 import org.example.biteshare.viewmodel.ReviewViewModel
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 
 @Preview
 @Composable
-fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel()) {
+fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
     // These would move to ReviewViewModel later for proper MVVM
 //    var restaurantName by remember { mutableStateOf("") }
 //    var reviewText by remember { mutableStateOf("") }

@@ -5,9 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.Review
 
-class ReviewViewModel {
+class ReviewViewModel(private val model: Model) {
     // 1. Data State (Information Hiding)
     var restaurantName by mutableStateOf("")
     var reviewText by mutableStateOf("")
@@ -51,10 +52,10 @@ class ReviewViewModel {
         )
 
         // 2. Send it to the Model (We will write this next)
-        // model.addReview(newReview)
+        model.addReview(newReview)
 
-        println("Review created: $newReview")
-        resetForm()  // reset so the next review starts with defaults
+        // reset so the next review starts with defaults
+        resetForm()
     }
 
 }
