@@ -1,5 +1,6 @@
 package org.example.biteshare.data
 
+import org.example.biteshare.domain.Model
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -9,6 +10,13 @@ import kotlin.test.assertTrue
 class FakeRepositoryTest {
 
     private val repo = FakeRepository()
+
+    private fun loggedInRepo(): FakeRepository {
+        val model = Model()
+        model.login("Kevin", "12345")
+        return FakeRepository(model)
+    }
+
 
     @Test
     fun allRestaurantsShouldHaveDetailData() {
@@ -138,5 +146,162 @@ class FakeRepositoryTest {
         assertTrue(locations.isNotEmpty())
         assertEquals(locations.sorted(), locations)
         assertEquals(locations.toSet().size, locations.size)
+    }
+
+    // ── Profile & User Management ──────────────────────────────────────────────
+
+    @Test
+    fun getProfileShouldReturnUserData() {
+        val profile = repo.getProfile()
+        assertNotNull(profile)
+        assertTrue(profile.name.isNotBlank(), "Profile name should not be blank.")
+        assertTrue(profile.friendCount >= 0, "Friend count should be non-negative.")
+    }
+
+    @Test
+    fun getEditableProfileShouldMatchGetProfile() {
+        val profile = repo.getProfile()
+        val editable = repo.getEditableProfile()
+        assertEquals(profile.name, editable.username, "Username should match between profile and editable profile.")
+        assertEquals(profile.email, editable.email, "Email should match between profile and editable profile.")
+    }
+
+    @Test
+    fun updateProfileShouldPersistChanges() {
+        val repo = loggedInRepo()
+
+        repo.updateProfile(
+            username = "UpdatedUser",
+            email = "updated@example.com",
+            bio = "New bio",
+            preferences = listOf("Pizza", "Sushi"),
+            foodRestrictions = listOf("Gluten-Free")
+        )
+
+        val after = repo.getEditableProfile()
+        assertEquals("UpdatedUser", after.username)
+        assertEquals("updated@example.com", after.email)
+        assertEquals("New bio", after.bio)
+        assertEquals(listOf("Pizza", "Sushi"), after.preferences)
+        assertEquals(listOf("Gluten-Free"), after.foodRestrictions)
+    }
+
+    @Test
+    fun updateNotificationPreferenceShouldToggleCorrectly() {
+        repo.updateNotificationPreference(false)
+        assertFalse(repo.getProfile().notificationsEnabled, "Notifications should be disabled.")
+
+        repo.updateNotificationPreference(true)
+        assertTrue(repo.getProfile().notificationsEnabled, "Notifications should be re-enabled.")
+    }
+
+// ── Saved Restaurants ──────────────────────────────────────────────────────
+
+    @Test
+    fun toggleSavedShouldAddRestaurantToSavedList() {
+        val repo = loggedInRepo()
+        // Kevin already has ["p1", "b1", "bp1"] saved — pick one that isn't saved
+        val unsavedId = "s1"
+        assertFalse(repo.getSavedRestaurants().any { it.id == unsavedId }, "s1 should not be saved initially.")
+
+        repo.toggleSaved(unsavedId)
+
+        assertTrue(repo.getSavedRestaurants().any { it.id == unsavedId }, "s1 should appear in saved list after toggle.")
+    }
+
+    @Test
+    fun toggleSavedTwiceShouldRemoveRestaurantFromSavedList() {
+        val repo = loggedInRepo()
+        val unsavedId = "s1"
+
+        repo.toggleSaved(unsavedId)
+        repo.toggleSaved(unsavedId)
+
+        assertFalse(repo.getSavedRestaurants().any { it.id == unsavedId }, "s1 should be removed after toggling twice.")
+    }
+
+    @Test
+    fun getSavedRestaurantsShouldReturnNonEmptyList() {
+        val saved = repo.getSavedRestaurants()
+        assertTrue(saved.isNotEmpty(), "Saved restaurants should not be empty (defaults from MockDB expected).")
+    }
+
+    @Test
+    fun getSavedRestaurantsShouldOnlyContainSavedEntries() {
+        val saved = repo.getSavedRestaurants()
+        val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
+        saved.forEach { savedRestaurant ->
+            val match = all.find { it.id == savedRestaurant.id }
+            assertNotNull(match, "Saved restaurant ${savedRestaurant.id} should exist in full list.")
+            assertTrue(
+                repo.getRestaurantById(savedRestaurant.id) != null,
+                "Each saved restaurant should be retrievable by ID."
+            )
+        }
+    }
+
+// ── getRestaurantsByTag edge cases ─────────────────────────────────────────
+
+    @Test
+    fun getRestaurantsByTagWithBlankTagShouldReturnAllRestaurants() {
+        val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
+        val result = repo.getRestaurantsByTag("")
+        assertEquals(all.size, result.size, "Blank tag should return all restaurants.")
+    }
+
+    @Test
+    fun getRestaurantsByTagWithUnknownTagShouldReturnAllRestaurants() {
+        val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
+        val result = repo.getRestaurantsByTag("xyzunknowntag")
+        assertEquals(all.size, result.size, "Unknown tag should return all restaurants.")
+    }
+
+    @Test
+    fun getRestaurantsByTagShouldBeCaseInsensitive() {
+        val lower = repo.getRestaurantsByTag("pizza")
+        val upper = repo.getRestaurantsByTag("PIZZA")
+        val mixed = repo.getRestaurantsByTag("PiZzA")
+        assertEquals(lower.map { it.id }.toSet(), upper.map { it.id }.toSet(), "Tag matching should be case-insensitive.")
+        assertEquals(lower.map { it.id }.toSet(), mixed.map { it.id }.toSet())
+    }
+
+// ── getHomeFeed edge cases ─────────────────────────────────────────────────
+
+    @Test
+    fun getHomeFeedShouldDefaultToJohnWhenNoNameGiven() {
+        val feed = repo.getHomeFeed()
+        assertTrue(feed.greeting.contains("John"), "Default greeting should use 'John'.")
+    }
+
+
+
+// ── getRestaurantDetailById edge cases ────────────────────────────────────
+
+    @Test
+    fun getRestaurantDetailByIdShouldReturnNullForNonExistentId() {
+        val detail = repo.getRestaurantDetailById("nonexistent_id_xyz")
+        assertEquals(null, detail, "Non-existent ID should return null.")
+    }
+
+
+
+
+
+
+
+// ── locations ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun locationsShouldAllCorrespondToRealRestaurants() {
+        val locations = repo.locations()
+        val allRestaurantLocations = (repo.restaurants() + repo.browseRestaurants())
+            .map { it.location }
+            .toSet()
+        locations.forEach { location ->
+            assertTrue(
+                location in allRestaurantLocations,
+                "Location '$location' from locations() should exist in at least one restaurant."
+            )
+        }
     }
 }
