@@ -22,13 +22,13 @@ class SavedViewModel(
     init {
         loadSavedRestaurants()
     }
-    fun refresh() {  // ADD THIS
+    fun refresh() {
         loadSavedRestaurants()
     }
 
 
     private fun loadSavedRestaurants() {
-        val restaurants = repo.getSavedRestaurants()  // CHANGED: Get from repository
+        val restaurants = repo.getSavedRestaurants()
         uiState = uiState.copy(savedRestaurants = restaurants)
     }
 
@@ -46,7 +46,7 @@ class SavedViewModel(
     }
 
     fun toggleSaved(restaurantId: String) {
-        repo.toggleSaved(restaurantId)  // CHANGED: Update via repository
-        loadSavedRestaurants()  // CHANGED: Reload to get updated list
+        repo.toggleSaved(restaurantId)
+        loadSavedRestaurants()
     }
 }

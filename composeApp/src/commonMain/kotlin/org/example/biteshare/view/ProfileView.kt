@@ -170,30 +170,6 @@ class ProfileView(
         }
     }
 
-    /*@Composable
-    private fun StatColumn(
-        count: String,
-        label: String,
-        modifier: Modifier = Modifier,
-        onClick: (() -> Unit)? = null,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = modifier
-        ) {
-            Text(
-                text = count,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }*/
-
     @Composable
     private fun StatColumn(
         count: String,
@@ -202,7 +178,7 @@ class ProfileView(
         onClick: (() -> Unit)? = null,
     ) {
         Surface(
-            onClick = onClick ?: {},  // Surface handles clicks better
+            onClick = onClick ?: {},
             modifier = modifier,
             shape = RoundedCornerShape(8.dp),
             color = if (onClick != null) {
