@@ -458,4 +458,8 @@ class Model {
         }
     }
 
+    fun updateUserPassword(newPassword: String) {
+        currentUser = currentUser?.copy(password = newPassword)
+    }
+
 }

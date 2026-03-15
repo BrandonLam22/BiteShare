@@ -20,6 +20,7 @@ import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.domain.PickModel
 import org.example.biteshare.view.BrowseView
+import org.example.biteshare.view.ChangePasswordView
 import org.example.biteshare.view.DetailView
 import org.example.biteshare.view.EditProfileView
 import org.example.biteshare.view.FriendsListView
@@ -33,6 +34,7 @@ import org.example.biteshare.view.ReviewView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.VoteWithFriendsView
 import org.example.biteshare.viewmodel.BrowseViewModel
+import org.example.biteshare.viewmodel.ChangePasswordViewModel
 import org.example.biteshare.viewmodel.DetailViewModel
 import org.example.biteshare.viewmodel.EditProfileViewModel
 import org.example.biteshare.viewmodel.FriendsListViewModel
@@ -68,6 +70,8 @@ private sealed class ProfileRoute {
     data object Help : ProfileRoute()
     data object EditProfile : ProfileRoute()
     data object FriendsList : ProfileRoute()
+
+    data object ChangePassword : ProfileRoute()
 }
 
 @Composable
@@ -91,7 +95,7 @@ fun AppRoot(model: Model) {
     val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
     val reviewVm = remember(model) { ReviewViewModel(model) }
     val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
-
+    val changePasswordVm = remember(repo) { ChangePasswordViewModel(repo) }
 
     Scaffold(
         bottomBar = {
@@ -253,7 +257,9 @@ fun AppRoot(model: Model) {
                                 onBack = {
                                     profileRoute = ProfileRoute.Main
                                     profileVm.loadProfile()
-                                }
+                                },
+                                onChangePassword = { profileRoute = ProfileRoute.ChangePassword }
+
                             ).Content()
                         }
                         ProfileRoute.FriendsList -> {
@@ -293,6 +299,12 @@ fun AppRoot(model: Model) {
                             HelpView(
                                 vm = helpVm,
                                 onBack = { profileRoute = ProfileRoute.Main }
+                            ).Content()
+                        }
+                        ProfileRoute.ChangePassword -> {
+                            ChangePasswordView(
+                                vm = changePasswordVm,
+                                onBack = { profileRoute = ProfileRoute.EditProfile }
                             ).Content()
                         }
                     }

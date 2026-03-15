@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.ImeAction
 class EditProfileView(
     private val vm: EditProfileViewModel,
     private val onBack: () -> Unit,
+    private val onChangePassword: () -> Unit,
 ) {
     @Composable
     fun Content() {
@@ -120,6 +121,16 @@ class EditProfileView(
                 shape = RoundedCornerShape(12.dp),
                 maxLines = 4
             )
+
+            Spacer(Modifier.height(32.dp))
+
+            OutlinedButton(
+                onClick = onChangePassword,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Change Password", modifier = Modifier.padding(vertical = 8.dp))
+            }
 
             Spacer(Modifier.height(32.dp))
 

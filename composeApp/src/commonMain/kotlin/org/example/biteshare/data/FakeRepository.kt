@@ -195,7 +195,7 @@ class FakeRepository(
             "sushi" -> "beyayenet_home"
             "burgers", "fast food" -> "chesse_burger_home"
             "coffee", "cafe", "drink" -> "coffee_home"
-            else -> "local_home"
+            else -> "coffee_home"
         }
         return RestaurantDetail(
             restaurantId = summary.id,
@@ -279,5 +279,13 @@ class FakeRepository(
 
     fun getFriends(): List<Friend> {
         return model.currentUser?.friends ?: emptyList()
+    }
+
+    fun getPassword(): String {
+        return model.currentUser?.password ?: "password123"
+    }
+
+    fun updatePassword(newPassword: String) {
+        model.updateUserPassword(newPassword)
     }
 }
