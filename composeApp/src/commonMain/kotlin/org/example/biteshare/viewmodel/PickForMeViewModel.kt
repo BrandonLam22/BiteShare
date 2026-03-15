@@ -15,10 +15,6 @@ import org.example.biteshare.domain.PickMode
 data class PickForMeUiState(
     val mode: PickMode = PickMode.ME_ONLY,
     val friends: List<Friend> = emptyList(),
-    val visibleFriends: List<Friend> = emptyList(),
-    val friendSearchQuery: String = "",
-    val newFriendName: String = "",
-    val friendActionMessage: String? = null,
     val selectedFriendIds: Set<String> = emptySet(),
     val filters: PickFilters = PickFilters(),
     val locations: List<String> = emptyList(),
@@ -34,7 +30,6 @@ class PickForMeViewModel(
         PickForMeUiState(
             mode = PickMode.ME_ONLY,
             friends = model.friends(),
-            visibleFriends = model.friends(),
             locations = listOf("Any") + model.locations(),
         )
     )
@@ -58,37 +53,6 @@ class PickForMeViewModel(
             selectedFriendIds = if (cur.contains(friendId)) cur - friendId else cur + friendId
         )
         refreshPreview()
-    }
-
-    fun updateFriendSearchQuery(query: String) {
-        uiState = uiState.copy(friendSearchQuery = query)
-        applyFriendSearch()
-    }
-
-    fun updateNewFriendName(name: String) {
-        uiState = uiState.copy(newFriendName = name, friendActionMessage = null)
-    }
-
-    fun addFriend() {
-        val name = uiState.newFriendName.trim()
-        if (name.isBlank()) {
-            uiState = uiState.copy(friendActionMessage = "Friend name cannot be empty.")
-            return
-        }
-
-        val added = model.addFriend(name)
-        if (!added) {
-            uiState = uiState.copy(friendActionMessage = "Unable to add friend (duplicate or unavailable).")
-            return
-        }
-
-        val refreshed = model.friends()
-        uiState = uiState.copy(
-            friends = refreshed,
-            newFriendName = "",
-            friendActionMessage = "Added friend: $name"
-        )
-        applyFriendSearch()
     }
 
     fun setLocation(location: String) {
@@ -126,11 +90,6 @@ class PickForMeViewModel(
 
     private fun refreshPreview() {
         uiState = uiState.copy(resultPreviewCount = model.previewCount(buildPickContext()))
-    }
-
-    private fun applyFriendSearch() {
-        val filtered = model.searchFriends(uiState.friendSearchQuery)
-        uiState = uiState.copy(visibleFriends = filtered)
     }
 }
 

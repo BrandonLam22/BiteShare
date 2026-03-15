@@ -60,46 +60,8 @@ class PickForMeView(
                 )
                 Spacer(Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = s.friendSearchQuery,
-                    onValueChange = vm::updateFriendSearchQuery,
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("Search friends...") },
-                    leadingIcon = { Text("🔎") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = s.newFriendName,
-                        onValueChange = vm::updateNewFriendName,
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        placeholder = { Text("Add friend by name") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(onClick = vm::addFriend) {
-                        Text("Add")
-                    }
-                }
-                if (s.friendActionMessage != null) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = s.friendActionMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(s.visibleFriends) { f ->
+                    items(s.friends) { f ->
                         FriendAvatar(
                             name = f.name,
                             selected = s.selectedFriendIds.contains(f.id),

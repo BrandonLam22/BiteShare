@@ -80,8 +80,6 @@ class PickModel(
     private val repo: FakeRepository,
 ) {
     fun friends(): List<Friend> = repo.friends()
-    fun searchFriends(query: String): List<Friend> = repo.searchFriends(query)
-    fun addFriend(name: String): Boolean = repo.addFriend(name)
 
     fun locations(): List<String> = repo.locations()
 
@@ -462,33 +460,6 @@ class Model {
 
     fun updateUserPassword(newPassword: String) {
         currentUser = currentUser?.copy(password = newPassword)
-    }
-
-    fun addFriend(friendName: String): Boolean {
-        val user = currentUser ?: return false
-        val normalized = friendName.trim()
-        if (normalized.isBlank()) return false
-        if (user.friends.any { it.name.equals(normalized, ignoreCase = true) }) return false
-
-        val friendIdBase = normalized.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
-        val friendId = if (friendIdBase.isNotBlank()) "${friendIdBase}_${user.friends.size + 1}" else "friend_${user.friends.size + 1}"
-        val updatedUser = user.copy(friends = user.friends + Friend(id = friendId, name = normalized))
-        currentUser = updatedUser
-
-        val index = _users.indexOfFirst { it.id == user.id }
-        if (index != -1) {
-            _users[index] = updatedUser
-        }
-        return true
-    }
-
-    fun searchFriends(query: String): List<Friend> {
-        val base = currentUser?.friends ?: emptyList()
-        val needle = query.trim().lowercase()
-        if (needle.isBlank()) return base
-        return base.filter { f ->
-            f.name.lowercase().contains(needle) || f.id.lowercase().contains(needle)
-        }
     }
 
 }
