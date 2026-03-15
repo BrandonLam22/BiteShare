@@ -50,26 +50,20 @@ class BrowseView(
             Spacer(Modifier.height(12.dp))
 
             // Search bar (no orange border on Browse)
-            Surface(
+            OutlinedTextField(
+                value = s.searchQuery,
+                onValueChange = vm::updateSearchQuery,
+                singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                tonalElevation = 1.dp,
+                placeholder = { Text("Search restaurant, type, location...") },
+                leadingIcon = { Text("🔍") },
+                trailingIcon = {
+                    if (s.searchQuery.isNotBlank()) {
+                        TextButton(onClick = vm::clearSearch) { Text("Clear") }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("🔍", style = MaterialTheme.typography.bodyLarge)
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = "Search",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            )
 
             Spacer(Modifier.height(20.dp))
 
@@ -117,7 +111,11 @@ class BrowseView(
                 if (s.restaurants.isEmpty()) {
                     item {
                         Text(
-                            text = "No restaurants found for this tag.",
+                            text = if (s.searchQuery.isNotBlank()) {
+                                "No restaurants found for \"${s.searchQuery}\"."
+                            } else {
+                                "No restaurants found for this tag."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 24.dp)

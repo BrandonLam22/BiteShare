@@ -141,9 +141,11 @@ fun AppRoot(model: Model) {
                                 vm = homeVm,
                                 onSearchClick = {
                                     browseVm.clearTagFilter()
+                                    browseVm.clearSearch()
                                     homeRoute = HomeRoute.Browse
                                 },
                                 onTagClick = { tag ->
+                                    browseVm.clearSearch()
                                     browseVm.applyTagFilter(tag)
                                     homeRoute = HomeRoute.Browse
                                 }

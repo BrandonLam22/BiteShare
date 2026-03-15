@@ -37,7 +37,24 @@ class FakeRepository(
 
     private var notificationsEnabled = true
 
-    fun friends(): List<Friend> = MockDB.fakeFriends
+    fun friends(): List<Friend> {
+        val userFriends = model.currentUser?.friends.orEmpty()
+        return if (userFriends.isNotEmpty()) userFriends else MockDB.fakeFriends
+    }
+
+    fun searchFriends(query: String): List<Friend> {
+        val base = friends()
+        val needle = query.trim().lowercase()
+        if (needle.isBlank()) return base
+        return base.filter { friend ->
+            friend.name.lowercase().contains(needle) || friend.id.lowercase().contains(needle)
+        }
+    }
+
+    fun addFriend(name: String): Boolean {
+        if (model.currentUser == null) return false
+        return model.addFriend(name)
+    }
 
     fun restaurants(): List<Restaurant> {
         val savedIds = effectiveSavedIds()
@@ -117,6 +134,31 @@ class FakeRepository(
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
         if (targetTypes.isEmpty()) return all
         return all.filter { restaurant -> classifyRestaurantTypes(restaurant).any { it in targetTypes } }
+    }
+
+    fun searchRestaurants(
+        query: String,
+        source: List<Restaurant>? = null,
+    ): List<Restaurant> {
+        val needle = normalizeTag(query)
+        val pool = (source ?: (restaurants() + browseRestaurants())).distinctBy { it.id }
+        if (needle.isBlank()) return pool
+
+        return pool.filter { restaurant ->
+            val detail = MockDB.restaurantDetails[restaurant.id]
+            val haystack = buildString {
+                append(normalizeTag(restaurant.name))
+                append(" ")
+                append(normalizeTag(restaurant.category))
+                append(" ")
+                append(normalizeTag(restaurant.location))
+                append(" ")
+                append(normalizeTag(detail?.description.orEmpty()))
+                append(" ")
+                append(normalizeTag(detail?.attributes?.joinToString(" ").orEmpty()))
+            }
+            haystack.contains(needle)
+        }
     }
 
     fun locations(): List<String> =

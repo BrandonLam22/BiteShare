@@ -3,6 +3,7 @@ package org.example.biteshare.presentation
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
+import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.viewmodel.PickForMeViewModel
 import kotlin.test.Test
@@ -60,5 +61,43 @@ class PickForMeViewModelTest {
 
         vm.toggleFriend("sally")
         assertFalse(vm.uiState.selectedFriendIds.contains("sally"))
+    }
+
+    @Test
+    fun friendSearchFiltersVisibleFriends() {
+        val vm = PickForMeViewModel(FakeRepository())
+        vm.setMode(PickMode.WITH_FRIENDS)
+
+        vm.updateFriendSearchQuery("alex")
+
+        assertTrue(vm.uiState.visibleFriends.isNotEmpty())
+        assertTrue(vm.uiState.visibleFriends.all { it.name.contains("alex", ignoreCase = true) })
+    }
+
+    @Test
+    fun addFriendWithBlankNameShowsMessage() {
+        val vm = PickForMeViewModel(FakeRepository())
+        vm.setMode(PickMode.WITH_FRIENDS)
+        vm.updateNewFriendName("   ")
+
+        vm.addFriend()
+
+        assertTrue(vm.uiState.friendActionMessage != null)
+        assertTrue(vm.uiState.friendActionMessage!!.contains("cannot be empty", ignoreCase = true))
+    }
+
+    @Test
+    fun addFriendWithLoggedInUserUpdatesFriendList() {
+        val model = Model()
+        model.login("Kevin", "12345")
+        val vm = PickForMeViewModel(FakeRepository(model))
+        vm.setMode(PickMode.WITH_FRIENDS)
+        val beforeCount = vm.uiState.friends.size
+
+        vm.updateNewFriendName("Sam")
+        vm.addFriend()
+
+        assertEquals(beforeCount + 1, vm.uiState.friends.size)
+        assertTrue(vm.uiState.friends.any { it.name == "Sam" })
     }
 }
