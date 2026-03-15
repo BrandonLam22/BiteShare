@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 
 data class EditProfileUiState(
     val username: String = "",
@@ -19,28 +21,31 @@ data class EditProfileUiState(
 )
 
 class EditProfileViewModel(
-    private val repo: FakeRepository,
+    private val repo: BiteShareRepository,
 ) {
     var uiState by mutableStateOf(EditProfileUiState())
         private set
 
     private var originalState: EditProfileUiState? = null
+    private val scope = MainScope()
 
     init {
         loadProfile()
     }
 
     private fun loadProfile() {
-        val profile = repo.getEditableProfile()
-        val initialState = EditProfileUiState(
-            username = profile.username,
-            email = profile.email,
-            bio = profile.bio,
-            preferences = profile.preferences.toSet(),
-            foodRestrictions = profile.foodRestrictions.toSet()
-        )
-        uiState = initialState
-        originalState = initialState
+        scope.launch {
+            val profile = repo.getEditableProfile()
+            val initialState = EditProfileUiState(
+                username = profile.username,
+                email = profile.email,
+                bio = profile.bio,
+                preferences = profile.preferences.toSet(),
+                foodRestrictions = profile.foodRestrictions.toSet()
+            )
+            uiState = initialState
+            originalState = initialState
+        }
     }
 
     fun updateUsername(value: String) {
@@ -142,13 +147,16 @@ class EditProfileViewModel(
     }
 
     fun saveProfile() {
-        repo.updateProfile(
-            username = uiState.username,
-            email = uiState.email,
-            bio = uiState.bio,
-            preferences = uiState.preferences.toList(),
-            foodRestrictions = uiState.foodRestrictions.toList()
-        )
+        val snapshot = uiState
+        scope.launch {
+            repo.updateProfile(
+                username = snapshot.username,
+                email = snapshot.email,
+                bio = snapshot.bio,
+                preferences = snapshot.preferences.toList(),
+                foodRestrictions = snapshot.foodRestrictions.toList()
+            )
+        }
     }
 }
 

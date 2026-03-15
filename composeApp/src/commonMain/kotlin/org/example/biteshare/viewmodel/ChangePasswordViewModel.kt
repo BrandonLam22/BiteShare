@@ -4,7 +4,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 
 data class ChangePasswordUiState(
     val currentPassword: String = "",
@@ -16,9 +18,11 @@ data class ChangePasswordUiState(
     val isSaved: Boolean = false
 )
 
-class ChangePasswordViewModel(private val repo: FakeRepository) {
+class ChangePasswordViewModel(private val repo: BiteShareRepository) {
     var uiState by mutableStateOf(ChangePasswordUiState())
         private set
+
+    private val scope = MainScope()
 
     fun updateCurrentPassword(value: String) {
         uiState = uiState.copy(currentPassword = value, currentPasswordError = null)
@@ -32,26 +36,29 @@ class ChangePasswordViewModel(private val repo: FakeRepository) {
         uiState = uiState.copy(confirmPassword = value, confirmPasswordError = null)
     }
 
-    fun save(): Boolean {
-        var valid = true
+    fun save() {
+        val snapshot = uiState
+        scope.launch {
+            var valid = true
+            val currentPassword = repo.getPassword()
 
-        if (uiState.currentPassword != repo.getPassword()) {
-            uiState = uiState.copy(currentPasswordError = "Incorrect current password")
-            valid = false
-        }
-        if (uiState.newPassword.length < 8) {
-            uiState = uiState.copy(newPasswordError = "Must be at least 8 characters")
-            valid = false
-        }
-        if (uiState.newPassword != uiState.confirmPassword) {
-            uiState = uiState.copy(confirmPasswordError = "Passwords do not match")
-            valid = false
-        }
+            if (snapshot.currentPassword != currentPassword) {
+                uiState = uiState.copy(currentPasswordError = "Incorrect current password")
+                valid = false
+            }
+            if (snapshot.newPassword.length < 8) {
+                uiState = uiState.copy(newPasswordError = "Must be at least 8 characters")
+                valid = false
+            }
+            if (snapshot.newPassword != snapshot.confirmPassword) {
+                uiState = uiState.copy(confirmPasswordError = "Passwords do not match")
+                valid = false
+            }
 
-        if (valid) {
-            repo.updatePassword(uiState.newPassword)
-            uiState = uiState.copy(isSaved = true)
+            if (valid) {
+                repo.updatePassword(snapshot.newPassword)
+                uiState = uiState.copy(isSaved = true)
+            }
         }
-        return valid
     }
 }

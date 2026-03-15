@@ -4,7 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.data.MockDB
 
 enum class PickMode { ME_ONLY, WITH_FRIENDS }
@@ -77,24 +77,27 @@ data class PopularItem(
 )
 
 class PickModel(
-    private val repo: FakeRepository,
+    private val repo: BiteShareRepository,
 ) {
-    fun friends(): List<Friend> = repo.friends()
+    suspend fun friends(): List<Friend> = repo.friends()
 
-    fun locations(): List<String> = repo.locations()
+    suspend fun locations(): List<String> = repo.locations()
 
-    fun recommend(context: PickContext): List<Restaurant> {
-        val filtered = applyFilters(repo.restaurants(), context.filters)
-        val withoutRestrictedItems = applyUserRestrictions(filtered, repo.userRestrictions())
+    suspend fun recommend(context: PickContext): List<Restaurant> {
+        val restaurants = repo.restaurants()
+        val filtered = applyFilters(restaurants, context.filters)
+        val restrictions = repo.userRestrictions()
+        val withoutRestrictedItems = applyUserRestrictions(filtered, restrictions)
+        val preferences = repo.userPreferences()
         return rankForMode(
             restaurants = withoutRestrictedItems,
             mode = context.mode,
             selectedFriendIds = context.selectedFriendIds,
-            preferences = repo.userPreferences(),
+            preferences = preferences,
         )
     }
 
-    fun previewCount(context: PickContext): Int = recommend(context).size
+    suspend fun previewCount(context: PickContext): Int = recommend(context).size
 
     private fun applyFilters(
         restaurants: List<Restaurant>,
@@ -145,17 +148,18 @@ class PickModel(
     private fun priceValue(rawPrice: String): Double =
         rawPrice.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: Double.MAX_VALUE
 
-    private fun rankForMode(
+    private suspend fun rankForMode(
         restaurants: List<Restaurant>,
         mode: PickMode,
         selectedFriendIds: Set<String>,
         preferences: List<String>,
     ): List<Restaurant> {
         val preferenceKeywords = extractKeywords(preferences, forRestrictions = false)
-        val preferenceScoreById = if (preferenceKeywords.isEmpty()) {
-            emptyMap()
-        } else {
-            restaurants.associate { it.id to preferenceScore(it, preferenceKeywords) }
+        val preferenceScoreById = mutableMapOf<String, Int>()
+        if (preferenceKeywords.isNotEmpty()) {
+            for (restaurant in restaurants) {
+                preferenceScoreById[restaurant.id] = preferenceScore(restaurant, preferenceKeywords)
+            }
         }
         fun score(restaurant: Restaurant): Int = preferenceScoreById[restaurant.id] ?: 0
 
@@ -186,20 +190,24 @@ class PickModel(
         }
     }
 
-    private fun applyUserRestrictions(
+    private suspend fun applyUserRestrictions(
         restaurants: List<Restaurant>,
         restrictions: List<String>,
     ): List<Restaurant> {
         val blockedKeywords = extractKeywords(restrictions, forRestrictions = true)
         if (blockedKeywords.isEmpty()) return restaurants
 
-        return restaurants.filter { restaurant ->
+        val result = mutableListOf<Restaurant>()
+        for (restaurant in restaurants) {
             val signals = restaurantSignals(restaurant)
-            blockedKeywords.none { keyword -> signals.contains(keyword) }
+            if (blockedKeywords.none { keyword -> signals.contains(keyword) }) {
+                result.add(restaurant)
+            }
         }
+        return result
     }
 
-    private fun preferenceScore(
+    private suspend fun preferenceScore(
         restaurant: Restaurant,
         preferenceKeywords: Set<String>,
     ): Int {
@@ -208,7 +216,7 @@ class PickModel(
         return preferenceKeywords.count { keyword -> signals.contains(keyword) }
     }
 
-    private fun restaurantSignals(restaurant: Restaurant): String {
+    private suspend fun restaurantSignals(restaurant: Restaurant): String {
         val detail = repo.getRestaurantDetailById(restaurant.id)
         val detailText = detail?.featuredItems
             ?.joinToString(" ") { "${it.name} ${it.description}" }

@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.Restaurant
 
 data class BrowseUiState(
@@ -18,33 +20,39 @@ data class BrowseUiState(
 )
 
 class BrowseViewModel(
-    private val repo: FakeRepository,
+    private val repo: BiteShareRepository,
 ) {
     var uiState by mutableStateOf(BrowseUiState())
         private set
+
+    private val scope = MainScope()
 
     init {
         loadRestaurants()
     }
 
     private fun loadRestaurants() {
-        val list = repo.browseRestaurants()
-        uiState = uiState.copy(
-            allRestaurants = list,
-            restaurants = list,
-            resultCount = list.size,
-            headerTitle = "Top Food Places",
-        )
+        scope.launch {
+            val list = repo.browseRestaurants()
+            uiState = uiState.copy(
+                allRestaurants = list,
+                restaurants = list,
+                resultCount = list.size,
+                headerTitle = "Top Food Places",
+            )
+        }
     }
 
     fun applyTagFilter(tag: String) {
-        val filtered = repo.getRestaurantsByTag(tag)
-        uiState = uiState.copy(
-            restaurants = filtered,
-            resultCount = filtered.size,
-            activeTag = tag,
-            headerTitle = "Top $tag Places",
-        )
+        scope.launch {
+            val filtered = repo.getRestaurantsByTag(tag)
+            uiState = uiState.copy(
+                restaurants = filtered,
+                resultCount = filtered.size,
+                activeTag = tag,
+                headerTitle = "Top $tag Places",
+            )
+        }
     }
 
     fun clearTagFilter() {

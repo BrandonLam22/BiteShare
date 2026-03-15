@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.Restaurant  // CHANGED: Import Restaurant
 
 // DELETED: Remove SavedRestaurant data class entirely - use Restaurant instead
@@ -14,10 +16,12 @@ data class SavedUiState(
 )
 
 class SavedViewModel(
-    private val repo: FakeRepository,  // CHANGED: Remove ? = null, make it required
+    private val repo: BiteShareRepository,  // CHANGED: Remove ? = null, make it required
 ) {
     var uiState by mutableStateOf(SavedUiState())
         private set
+
+    private val scope = MainScope()
 
     init {
         loadSavedRestaurants()
@@ -28,8 +32,10 @@ class SavedViewModel(
 
 
     private fun loadSavedRestaurants() {
-        val restaurants = repo.getSavedRestaurants()
-        uiState = uiState.copy(savedRestaurants = restaurants)
+        scope.launch {
+            val restaurants = repo.getSavedRestaurants()
+            uiState = uiState.copy(savedRestaurants = restaurants)
+        }
     }
 
     fun setSortBy(sortBy: String) {
@@ -46,7 +52,9 @@ class SavedViewModel(
     }
 
     fun toggleSaved(restaurantId: String) {
-        repo.toggleSaved(restaurantId)
-        loadSavedRestaurants()
+        scope.launch {
+            repo.toggleSaved(restaurantId)
+            loadSavedRestaurants()
+        }
     }
 }

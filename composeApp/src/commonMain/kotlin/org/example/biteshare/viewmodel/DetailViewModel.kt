@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.Review
@@ -26,43 +28,47 @@ data class DetailUiState(
 )
 
 class DetailViewModel(
-    private val repo: FakeRepository,
+    private val repo: BiteShareRepository,
     restaurantId: String,
 ) {
     var uiState by mutableStateOf(DetailUiState())
         private set
+
+    private val scope = MainScope()
 
     init {
         loadDetail(restaurantId)
     }
 
     private fun loadDetail(restaurantId: String) {
-        val restaurant = repo.getRestaurantById(restaurantId)
-        val detail = repo.getRestaurantDetailById(restaurantId)
-        val initialMeal = MealTab.Lunch
-        val initialSlots = slotsForMeal(initialMeal)
-        val reviews = detail?.reviews.orEmpty()
-        uiState = uiState.copy(
-            restaurant = restaurant,
-            restaurantDetail = detail,
-            reviewCount = reviews.size,
-            location = detail?.location?.city ?: "Addis Ababa",
-            priceRange = detail?.priceRange ?: "$$$",
-            distance = detail?.location?.distance ?: "2.5 miles away",
-            selectedMeal = initialMeal,
-            timeSlots = initialSlots,
-            selectedTimeSlot = initialSlots.firstOrNull(),
-            averageReviewScore = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0,
-            reviewHighlights = reviews.take(3),
-            popularReviewTags = reviews
-                .flatMap { it.tags }
-                .groupingBy { it }
-                .eachCount()
-                .toList()
-                .sortedByDescending { (_, count) -> count }
-                .take(4)
-                .map { (tag, _) -> tag },
-        )
+        scope.launch {
+            val restaurant = repo.getRestaurantById(restaurantId)
+            val detail = repo.getRestaurantDetailById(restaurantId)
+            val initialMeal = MealTab.Lunch
+            val initialSlots = slotsForMeal(initialMeal)
+            val reviews = detail?.reviews.orEmpty()
+            uiState = uiState.copy(
+                restaurant = restaurant,
+                restaurantDetail = detail,
+                reviewCount = reviews.size,
+                location = detail?.location?.city ?: "Addis Ababa",
+                priceRange = detail?.priceRange ?: "$$$",
+                distance = detail?.location?.distance ?: "2.5 miles away",
+                selectedMeal = initialMeal,
+                timeSlots = initialSlots,
+                selectedTimeSlot = initialSlots.firstOrNull(),
+                averageReviewScore = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0,
+                reviewHighlights = reviews.take(3),
+                popularReviewTags = reviews
+                    .flatMap { it.tags }
+                    .groupingBy { it }
+                    .eachCount()
+                    .toList()
+                    .sortedByDescending { (_, count) -> count }
+                    .take(4)
+                    .map { (tag, _) -> tag },
+            )
+        }
     }
 
     fun selectMeal(tab: MealTab) {
@@ -79,12 +85,13 @@ class DetailViewModel(
     }
 
     fun toggleSaved() {
-        uiState.restaurant?.let { r ->
-            repo.toggleSaved(r.id)
-            val refreshed = repo.getRestaurantById(r.id)
+        val current = uiState.restaurant ?: return
+        scope.launch {
+            repo.toggleSaved(current.id)
+            val refreshed = repo.getRestaurantById(current.id)
             val next = when {
-                refreshed == null -> r.copy(isSaved = !r.isSaved)
-                refreshed.isSaved == r.isSaved -> refreshed.copy(isSaved = !r.isSaved)
+                refreshed == null -> current.copy(isSaved = !current.isSaved)
+                refreshed.isSaved == current.isSaved -> refreshed.copy(isSaved = !current.isSaved)
                 else -> refreshed
             }
             uiState = uiState.copy(restaurant = next)

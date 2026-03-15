@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickModel
 import org.example.biteshare.domain.Restaurant
@@ -16,13 +18,17 @@ data class RecommendsUiState(
 class RecommendsViewModel(
     private val model: PickModel,
 ) {
-    constructor(repo: FakeRepository) : this(PickModel(repo))
+    constructor(repo: BiteShareRepository) : this(PickModel(repo))
 
     var uiState by mutableStateOf(RecommendsUiState())
         private set
 
+    private val scope = MainScope()
+
     fun load(context: PickContext) {
-        loadItems(model.recommend(context))
+        scope.launch {
+            loadItems(model.recommend(context))
+        }
     }
 
     fun loadItems(

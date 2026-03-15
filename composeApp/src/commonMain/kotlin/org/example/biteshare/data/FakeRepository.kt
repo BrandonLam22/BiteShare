@@ -16,7 +16,7 @@ import org.example.biteshare.domain.RestaurantLocation
 
 class FakeRepository(
     private val model: Model = Model(),
-) {
+) : BiteShareRepository {
     private data class HomeType(
         val id: String,
         val label: String,
@@ -37,23 +37,23 @@ class FakeRepository(
 
     private var notificationsEnabled = true
 
-    fun friends(): List<Friend> = MockDB.fakeFriends
+    override suspend fun friends(): List<Friend> = model.currentUser?.friends ?: MockDB.fakeFriends
 
-    fun restaurants(): List<Restaurant> {
+    override suspend fun restaurants(): List<Restaurant> {
         val savedIds = effectiveSavedIds()
         return MockDB.coreRestaurants.map { restaurant ->
             restaurant.copy(isSaved = restaurant.id in savedIds)
         }
     }
 
-    fun browseRestaurants(): List<Restaurant> {
+    override suspend fun browseRestaurants(): List<Restaurant> {
         val savedIds = effectiveSavedIds()
         return MockDB.browseRestaurants.map { restaurant ->
             restaurant.copy(isSaved = restaurant.id in savedIds)
         }
     }
 
-    fun getRestaurantById(id: String): Restaurant? {
+    override suspend fun getRestaurantById(id: String): Restaurant? {
         val userSavedIds = model.getSavedRestaurantIds()
 
         return (restaurants() + browseRestaurants())
@@ -62,7 +62,7 @@ class FakeRepository(
             ?.copy(isSaved = userSavedIds.contains(id))
     }
 
-    fun getHomeFeed(userName: String = "John"): HomeFeed {
+    override suspend fun getHomeFeed(userName: String): HomeFeed {
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
         val typeCounts = linkedMapOf<String, Int>()
         all.forEach { restaurant ->
@@ -107,33 +107,33 @@ class FakeRepository(
         )
     }
 
-    fun getRestaurantDetailById(id: String): RestaurantDetail? {
+    override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
         val summary = getRestaurantById(id) ?: return null
         return MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
     }
 
-    fun getRestaurantsByTag(tag: String): List<Restaurant> {
+    override suspend fun getRestaurantsByTag(tag: String): List<Restaurant> {
         val targetTypes = resolveHomeTypes(tag)
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
         if (targetTypes.isEmpty()) return all
         return all.filter { restaurant -> classifyRestaurantTypes(restaurant).any { it in targetTypes } }
     }
 
-    fun locations(): List<String> =
+    override suspend fun locations(): List<String> =
         (restaurants() + browseRestaurants())
             .map { it.location }
             .distinct()
             .sorted()
 
-    fun recommend(context: PickContext): List<Restaurant> = PickModel(this).recommend(context)
+    suspend fun recommend(context: PickContext): List<Restaurant> = PickModel(this).recommend(context)
 
-    fun userPreferences(): List<String> =
+    override suspend fun userPreferences(): List<String> =
         model.currentUser?.preferences ?: emptyList()
 
-    fun userRestrictions(): List<String> =
+    override suspend fun userRestrictions(): List<String> =
         model.currentUser?.foodRestrictions ?: emptyList()
 
-    fun getProfile(): ProfileData {
+    override suspend fun getProfile(): ProfileData {
         val user = model.currentUser ?: MockDB.fakeUsers.firstOrNull()
         return ProfileData(
             name = user?.username ?: "Guest",
@@ -143,26 +143,26 @@ class FakeRepository(
         )
     }
 
-    fun updateNotificationPreference(enabled: Boolean) {
+    override suspend fun updateNotificationPreference(enabled: Boolean) {
         notificationsEnabled = enabled
     }
 
-    fun getSavedRestaurants(): List<Restaurant> {
+    override suspend fun getSavedRestaurants(): List<Restaurant> {
         val savedIds = effectiveSavedIds()
         return (restaurants() + browseRestaurants())
             .distinctBy { it.id }
             .filter { it.id in savedIds }
     }
 
-    fun toggleSaved(restaurantId: String) {
+    override suspend fun toggleSaved(restaurantId: String) {
         model.toggleSavedRestaurant(restaurantId)
     }
 
-    fun logout() {
+    override suspend fun logout() {
         model.logout()
     }
 
-    fun getEditableProfile(): EditableProfile {
+    override suspend fun getEditableProfile(): EditableProfile {
         val user = model.currentUser ?: MockDB.fakeUsers.firstOrNull()
         return EditableProfile(
             username = user?.username ?: "",
@@ -173,7 +173,7 @@ class FakeRepository(
         )
     }
 
-    fun updateProfile(
+    override suspend fun updateProfile(
         username: String,
         email: String,
         bio: String,
@@ -277,15 +277,11 @@ class FakeRepository(
     private fun normalizeTag(tag: String): String =
         tag.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 
-    fun getFriends(): List<Friend> {
-        return model.currentUser?.friends ?: emptyList()
-    }
-
-    fun getPassword(): String {
+    override suspend fun getPassword(): String {
         return model.currentUser?.password ?: "password123"
     }
 
-    fun updatePassword(newPassword: String) {
+    override suspend fun updatePassword(newPassword: String) {
         model.updateUserPassword(newPassword)
     }
 }

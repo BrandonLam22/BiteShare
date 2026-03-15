@@ -11,10 +11,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.LaunchedEffect
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
+import org.example.biteshare.data.SupabaseRepository
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickMode
@@ -76,8 +78,9 @@ private sealed class ProfileRoute {
 
 @Composable
 fun AppRoot(model: Model) {
-    val repo = remember(model) { FakeRepository(model) }
+    val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
     val pickModel = remember(repo) { PickModel(repo) }
+    val scope = rememberCoroutineScope()
 
     var tab by remember { mutableStateOf(Tab.Home) }
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
@@ -185,16 +188,18 @@ fun AppRoot(model: Model) {
                                 vm = pickVm,
                                 onGo = {
                                     val context = pickVm.buildPickContext()
-                                    val items = pickModel.recommend(context)
-                                    if (context.mode == PickMode.WITH_FRIENDS) {
-                                        recVm.loadItems(
-                                            items = items,
-                                            title = "Recommended for Your Group"
-                                        )
-                                        pickRoute = PickRoute.Generated(context)
-                                    } else {
-                                        recVm.loadItems(items = items, title = "Recommends")
-                                        pickRoute = PickRoute.Recommends(context)
+                                    scope.launch {
+                                        val items = pickModel.recommend(context)
+                                        if (context.mode == PickMode.WITH_FRIENDS) {
+                                            recVm.loadItems(
+                                                items = items,
+                                                title = "Recommended for Your Group"
+                                            )
+                                            pickRoute = PickRoute.Generated(context)
+                                        } else {
+                                            recVm.loadItems(items = items, title = "Recommends")
+                                            pickRoute = PickRoute.Recommends(context)
+                                        }
                                     }
                                 }
                             ).Content()

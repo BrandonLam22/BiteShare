@@ -3,6 +3,8 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PickContext
@@ -25,24 +27,28 @@ class VoteWithFriendsViewModel(
     var uiState by mutableStateOf(VoteWithFriendsUiState())
         private set
 
-    init {
-        val allFriends = model.friends()
-        val selectedFriends = allFriends.filter { it.id in context.selectedFriendIds }
-        val participants = if (selectedFriends.isNotEmpty()) selectedFriends else allFriends
-        val recommended = if (candidateRestaurants.isNotEmpty()) {
-            candidateRestaurants
-        } else {
-            model.recommend(context)
-        }
-        val recommendedIds = recommended.map { it.id }
+    private val scope = MainScope()
 
-        uiState = VoteWithFriendsUiState(
-            friends = participants,
-            restaurants = recommended,
-            friendVotes = participants.associate { friend ->
-                friend.id to buildMockVotes(friend.id, recommendedIds)
+    init {
+        scope.launch {
+            val allFriends = model.friends()
+            val selectedFriends = allFriends.filter { it.id in context.selectedFriendIds }
+            val participants = if (selectedFriends.isNotEmpty()) selectedFriends else allFriends
+            val recommended = if (candidateRestaurants.isNotEmpty()) {
+                candidateRestaurants
+            } else {
+                model.recommend(context)
             }
-        )
+            val recommendedIds = recommended.map { it.id }
+
+            uiState = VoteWithFriendsUiState(
+                friends = participants,
+                restaurants = recommended,
+                friendVotes = participants.associate { friend ->
+                    friend.id to buildMockVotes(friend.id, recommendedIds)
+                }
+            )
+        }
     }
 
     fun toggleMyVote(restaurantId: String) {

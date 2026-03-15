@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.Friend
 
 data class FriendsListUiState(
@@ -11,17 +13,21 @@ data class FriendsListUiState(
 )
 
 class FriendsListViewModel(
-    private val repo: FakeRepository,
+    private val repo: BiteShareRepository,
 ) {
     var uiState by mutableStateOf(FriendsListUiState())
         private set
+
+    private val scope = MainScope()
 
     init {
         loadFriends()
     }
 
     private fun loadFriends() {
-        val friends = repo.getFriends()
-        uiState = uiState.copy(friends = friends)
+        scope.launch {
+            val friends = repo.friends()
+            uiState = uiState.copy(friends = friends)
+        }
     }
 }

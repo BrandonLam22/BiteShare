@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.FakeRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
 import org.example.biteshare.domain.Friend
@@ -24,19 +26,15 @@ data class PickForMeUiState(
 class PickForMeViewModel(
     private val model: PickModel,
 ) {
-    constructor(repo: FakeRepository) : this(PickModel(repo))
+    constructor(repo: BiteShareRepository) : this(PickModel(repo))
 
-    var uiState by mutableStateOf(
-        PickForMeUiState(
-            mode = PickMode.ME_ONLY,
-            friends = model.friends(),
-            locations = listOf("Any") + model.locations(),
-        )
-    )
+    var uiState by mutableStateOf(PickForMeUiState(mode = PickMode.ME_ONLY))
         private set
 
+    private val scope = MainScope()
+
     init {
-        refreshPreview()
+        loadLookups()
     }
 
     fun setMode(mode: PickMode) {
@@ -89,7 +87,20 @@ class PickForMeViewModel(
     }
 
     private fun refreshPreview() {
-        uiState = uiState.copy(resultPreviewCount = model.previewCount(buildPickContext()))
+        val context = buildPickContext()
+        scope.launch {
+            val count = model.previewCount(context)
+            uiState = uiState.copy(resultPreviewCount = count)
+        }
+    }
+
+    private fun loadLookups() {
+        scope.launch {
+            val friends = model.friends()
+            val locations = listOf("Any") + model.locations()
+            uiState = uiState.copy(friends = friends, locations = locations)
+            refreshPreview()
+        }
     }
 }
 
@@ -97,4 +108,3 @@ class PickForMeViewModel(
 // Picking Logic
 
 // 
-
