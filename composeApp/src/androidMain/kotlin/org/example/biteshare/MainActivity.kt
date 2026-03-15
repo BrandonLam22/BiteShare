@@ -1,5 +1,6 @@
 package org.example.biteshare
 
+import android.net.http.HttpResponseCache.install
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import org.example.biteshare.app.AppRoot
 import org.example.biteshare.app.AuthGate
 import org.example.biteshare.app.BiteShareTheme
 import org.example.biteshare.domain.Model  // ADD THIS IMPORT
+
 
 class MainActivity : ComponentActivity() {
     private val appModel = Model()

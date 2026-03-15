@@ -83,7 +83,6 @@ fun AppRoot(model: Model) {
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
-
     val homeVm = remember(repo) { HomeViewModel(repo) }
     val browseVm = remember(repo) { BrowseViewModel(repo) }
     val pickVm = remember(pickModel) { PickForMeViewModel(pickModel) }
