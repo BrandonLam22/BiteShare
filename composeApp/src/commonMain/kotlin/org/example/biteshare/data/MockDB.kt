@@ -25,7 +25,7 @@ object MockDB {
 
     val fakeUsers = listOf(
         User(
-            id = "user_01",
+            id = "test-user-1",
             username = "Kevin",
             email = "k389zhan@uwaterloo.ca",
             password = "12345",

@@ -4,8 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.data.MockDB
+import org.example.biteshare.data.PickRepository
 
 enum class PickMode { ME_ONLY, WITH_FRIENDS }
 
@@ -63,13 +63,11 @@ data class PickContext(
     val filters: PickFilters = PickFilters(),
 )
 
-/** 主屏分类（Local, Fast Food, Drink, Breakfast） */
 data class CategoryItem(
     val id: String,
     val label: String,
 )
 
-/** 热门菜品/饮品卡片：标题为菜品名，副标题为餐厅/咖啡馆名 */
 data class PopularItem(
     val id: String,
     val title: String,
@@ -77,7 +75,7 @@ data class PopularItem(
 )
 
 class PickModel(
-    private val repo: BiteShareRepository,
+    private val repo: PickRepository,
 ) {
     suspend fun friends(): List<Friend> = repo.friends()
 
@@ -98,6 +96,15 @@ class PickModel(
     }
 
     suspend fun previewCount(context: PickContext): Int = recommend(context).size
+
+    suspend fun currentUserId(): String? = repo.currentUserId()
+
+    suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> =
+        repo.restaurantSelectionsByUserIds(userIds)
+
+    suspend fun setRestaurantSelection(userId: String, restaurantId: String, selected: Boolean) {
+        repo.setRestaurantSelection(userId, restaurantId, selected)
+    }
 
     private fun applyFilters(
         restaurants: List<Restaurant>,
@@ -306,7 +313,7 @@ class PickModel(
         }
     }
 }
-/** 首页聚合数据：由 data 层组装，供 HomeViewModel 消费 */
+
 data class HomeFeed(
     val greeting: String,
     val categories: List<CategoryItem>,

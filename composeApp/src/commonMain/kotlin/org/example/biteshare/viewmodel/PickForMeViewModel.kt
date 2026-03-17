@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import org.example.biteshare.data.BiteShareRepository
+import org.example.biteshare.data.PickRepository
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
 import org.example.biteshare.domain.Friend
@@ -26,7 +26,7 @@ data class PickForMeUiState(
 class PickForMeViewModel(
     private val model: PickModel,
 ) {
-    constructor(repo: BiteShareRepository) : this(PickModel(repo))
+    constructor(repo: PickRepository) : this(PickModel(repo))
 
     var uiState by mutableStateOf(PickForMeUiState(mode = PickMode.ME_ONLY))
         private set

@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import org.example.biteshare.data.BiteShareRepository
+import org.example.biteshare.data.PickDbRepository
+import org.example.biteshare.data.PickRepository
 import org.example.biteshare.data.SupabaseRepository
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
@@ -60,9 +62,9 @@ private sealed class HomeRoute {
 
 private sealed class PickRoute {
     data object Main : PickRoute()
-    data class Generated(val ctx: PickContext) : PickRoute()
+    data class GroupRecommend(val ctx: PickContext) : PickRoute()
     data class Vote(val ctx: PickContext) : PickRoute()
-    data class Recommends(val ctx: PickContext) : PickRoute()
+    data class SoloRecommend(val ctx: PickContext) : PickRoute()
 }
 
 private sealed class ProfileRoute {
@@ -79,7 +81,14 @@ private sealed class ProfileRoute {
 @Composable
 fun AppRoot(model: Model) {
     val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
-    val pickModel = remember(repo) { PickModel(repo) }
+    val pickRepo: PickRepository = remember(model) {
+        PickDbRepository(
+            userIdProvider = { model.currentUser?.id },
+            userEmailProvider = { model.currentUser?.email },
+            userNameProvider = { model.currentUser?.username }
+        )
+    }
+    val pickModel = remember(pickRepo) { PickModel(pickRepo) }
     val scope = rememberCoroutineScope()
 
     var tab by remember { mutableStateOf(Tab.Home) }
@@ -195,17 +204,17 @@ fun AppRoot(model: Model) {
                                                 items = items,
                                                 title = "Recommended for Your Group"
                                             )
-                                            pickRoute = PickRoute.Generated(context)
+                                            pickRoute = PickRoute.GroupRecommend(context)
                                         } else {
                                             recVm.loadItems(items = items, title = "Recommends")
-                                            pickRoute = PickRoute.Recommends(context)
+                                            pickRoute = PickRoute.SoloRecommend(context)
                                         }
                                     }
                                 }
                             ).Content()
                         }
 
-                        is PickRoute.Generated -> {
+                        is PickRoute.GroupRecommend -> {
                             RecommendsView(
                                 vm = recVm,
                                 onBack = { pickRoute = PickRoute.Main },
@@ -224,11 +233,11 @@ fun AppRoot(model: Model) {
                             }
                             VoteWithFriendsView(
                                 vm = voteVm,
-                                onBack = { pickRoute = PickRoute.Generated(route.ctx) }
+                                onBack = { pickRoute = PickRoute.GroupRecommend(route.ctx) }
                             ).Content()
                         }
 
-                        is PickRoute.Recommends -> {
+                        is PickRoute.SoloRecommend -> {
                             LaunchedEffect(route.ctx) {
                                 recVm.load(route.ctx)
                             }

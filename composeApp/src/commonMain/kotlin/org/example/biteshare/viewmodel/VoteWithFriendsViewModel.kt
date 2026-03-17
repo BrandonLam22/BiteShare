@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlin.math.absoluteValue
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickModel
@@ -28,6 +27,7 @@ class VoteWithFriendsViewModel(
         private set
 
     private val scope = MainScope()
+    private var currentUserId: String? = null
 
     init {
         scope.launch {
@@ -39,14 +39,29 @@ class VoteWithFriendsViewModel(
             } else {
                 model.recommend(context)
             }
-            val recommendedIds = recommended.map { it.id }
+            val recommendedIds = recommended.map { it.id }.toSet()
+            val myUserId = model.currentUserId()?.takeIf { it.isNotBlank() }
+            currentUserId = myUserId
+            val selectionUserIds = buildSet {
+                addAll(participants.map { it.id })
+                myUserId?.let { add(it) }
+            }
+            val selectionsByUser = if (selectionUserIds.isEmpty() || recommendedIds.isEmpty()) {
+                emptyMap()
+            } else {
+                model.restaurantSelectionsByUserIds(selectionUserIds)
+                    .mapValues { (_, ids) -> ids.filter { it in recommendedIds }.toSet() }
+            }
+            val myVotes = myUserId?.let { selectionsByUser[it].orEmpty() }.orEmpty()
+            val friendVotes = participants
+                .filter { it.id != myUserId }
+                .associate { friend -> friend.id to selectionsByUser[friend.id].orEmpty() }
 
             uiState = VoteWithFriendsUiState(
                 friends = participants,
                 restaurants = recommended,
-                friendVotes = participants.associate { friend ->
-                    friend.id to buildMockVotes(friend.id, recommendedIds)
-                }
+                myVotes = myVotes,
+                friendVotes = friendVotes
             )
         }
     }
@@ -56,6 +71,11 @@ class VoteWithFriendsViewModel(
         val oldVotes = uiState.myVotes
         val newVotes = if (restaurantId in oldVotes) oldVotes - restaurantId else oldVotes + restaurantId
         uiState = uiState.copy(myVotes = newVotes)
+        val myUserId = currentUserId ?: return
+        val selected = restaurantId in newVotes
+        scope.launch {
+            model.setRestaurantSelection(myUserId, restaurantId, selected)
+        }
     }
 
     fun finishVoting() {
@@ -90,21 +110,4 @@ class VoteWithFriendsViewModel(
         )
     }
 
-    private fun buildMockVotes(
-        friendId: String,
-        restaurantIds: List<String>,
-    ): Set<String> {
-        if (restaurantIds.isEmpty()) return emptySet()
-
-        val size = restaurantIds.size
-        val seed = friendId.hashCode().absoluteValue
-        val start = seed % size
-        val pickCount = ((seed % 3) + 1).coerceAtMost(size)
-
-        return buildSet {
-            repeat(pickCount) { offset ->
-                add(restaurantIds[(start + offset) % size])
-            }
-        }
-    }
 }

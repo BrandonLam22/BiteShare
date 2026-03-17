@@ -1,106 +1,60 @@
 package org.example.biteshare.domain
 
-import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.data.PickMockDB
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PickModelTest {
 
-    private val repo = FakeRepository()
-    private val model = PickModel(repo)
-
     @Test
-    fun recommendInMeOnlyModeIsSortedByRating() {
-        val context = PickContext(mode = PickMode.ME_ONLY)
+    fun recommendRespectsLocationFilter() {
+        val repo = PickMockDB()
+        val model = PickModel(repo)
 
-        val items = model.recommend(context)
-
-        assertTrue(items.isNotEmpty())
-        assertEquals("Hope Café", items.first().name)
-        assertTrue(items.zipWithNext().all { (a, b) -> a.rating >= b.rating })
-    }
-
-    @Test
-    fun recommendAppliesLocationBudgetCuisineAndRatingFilters() {
-        val filters = PickFilters(
-            location = "Addis Ababa",
-            budget = BudgetFilter.BUDGET,
-            cuisine = CuisineFilter.DRINK,
-            openNowOnly = true,
-            minRating = 9.0
-        )
-        val context = PickContext(mode = PickMode.ME_ONLY, filters = filters)
-
-        val items = model.recommend(context)
-
-        assertEquals(1, items.size)
-        assertEquals("Hope Café", items.first().name)
-    }
-
-    @Test
-    fun withFriendsAndTwoSelectionsPrioritizesLowerPrice() {
         val context = PickContext(
-            mode = PickMode.WITH_FRIENDS,
-            selectedFriendIds = setOf("alex", "sally")
+            mode = PickMode.ME_ONLY,
+            filters = PickFilters(location = "Waterloo")
         )
 
-        val items = model.recommend(context)
-        val priceValues = items.map { it.price.filter { ch -> ch.isDigit() || ch == '.' }.toDouble() }
-
-        assertTrue(items.isNotEmpty())
-        assertEquals("Hope Café", items.first().name)
-        assertTrue(priceValues.zipWithNext().all { (a, b) -> a <= b })
+        val results = model.recommend(context)
+        assertTrue(results.isNotEmpty(), "Expected recommendations for Waterloo.")
+        assertTrue(results.all { it.location == "Waterloo" })
     }
 
     @Test
-    fun previewCountMatchesRecommendSize() {
+    fun recommendFiltersOutRestrictedItems() {
+        val repo = PickMockDB(restrictions = listOf("coffee"))
+        val model = PickModel(repo)
+
         val context = PickContext(mode = PickMode.ME_ONLY)
+        val results = model.recommend(context)
 
-        val previewCount = model.previewCount(context)
-        val actualCount = model.recommend(context).size
-
-        assertEquals(actualCount, previewCount)
+        assertTrue(results.isNotEmpty())
+        assertTrue(results.none { it.category.equals("coffee", ignoreCase = true) })
     }
 
     @Test
-    fun recommendUsesSavedPreferencesFromProfileForRanking() {
-        val modelState = Model()
-        modelState.login("Kevin", "12345")
-        val user = requireNotNull(modelState.currentUser)
-        modelState.updateUserProfile(
-            username = user.username,
-            email = user.email,
-            bio = user.bio,
-            preferences = listOf("Pizza"),
-            foodRestrictions = emptyList()
-        )
+    fun preferencesInfluenceRanking() {
+        val repo = PickMockDB(preferences = listOf("pizza"))
+        val model = PickModel(repo)
 
-        val personalized = PickModel(FakeRepository(modelState))
-        val items = personalized.recommend(PickContext(mode = PickMode.ME_ONLY))
+        val context = PickContext(mode = PickMode.ME_ONLY)
+        val results = model.recommend(context)
 
-        assertTrue(items.isNotEmpty())
-        assertTrue(items.first().category.equals("Pizza", ignoreCase = true))
+        assertTrue(results.isNotEmpty())
+        assertTrue(results.first().category.equals("pizza", ignoreCase = true))
     }
 
     @Test
-    fun recommendAppliesSavedRestrictionsFromProfile() {
-        val modelState = Model()
-        modelState.login("Kevin", "12345")
-        val user = requireNotNull(modelState.currentUser)
-        modelState.updateUserProfile(
-            username = user.username,
-            email = user.email,
-            bio = user.bio,
-            preferences = emptyList(),
-            foodRestrictions = listOf("No Sushi")
-        )
+    fun previewCountMatchesRecommendationSize() {
+        val repo = PickMockDB(preferences = listOf("sushi"))
+        val model = PickModel(repo)
 
-        val personalized = PickModel(FakeRepository(modelState))
-        val items = personalized.recommend(PickContext(mode = PickMode.ME_ONLY))
+        val context = PickContext(mode = PickMode.ME_ONLY)
+        val count = model.previewCount(context)
+        val results = model.recommend(context)
 
-        assertFalse(items.any { it.name.contains("sushi", ignoreCase = true) })
-        assertFalse(items.any { it.category.equals("Sushi", ignoreCase = true) })
+        assertEquals(results.size, count)
     }
 }

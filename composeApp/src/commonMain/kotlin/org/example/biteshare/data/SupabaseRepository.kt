@@ -28,7 +28,10 @@ class SupabaseRepository(
 
     override suspend fun getHomeFeed(userName: String): HomeFeed {
         val restaurants = restaurants()
-        if (restaurants.isEmpty()) return fallback.getHomeFeed(userName)
+        if (restaurants.isEmpty()) {
+            println("SupabaseRepository.getHomeFeed: restaurants empty, using fallback")
+            return fallback.getHomeFeed(userName)
+        }
 
         val grouped = restaurants
             .groupBy { it.category.ifBlank { "Other" } }
@@ -123,11 +126,18 @@ class SupabaseRepository(
     override suspend fun restaurants(): List<Restaurant> {
         val savedIds = model.getSavedRestaurantIds()
         return try {
-            client.postgrest[restaurantsTable]
+            val raw = client.postgrest[restaurantsTable]
                 .select(Columns.raw("*"))
                 .decodeList<JsonObject>()
-                .mapNotNull { it.toDomain(savedIds) }
+            val mapped = raw.mapNotNull { it.toDomain(savedIds) }
+            println("SupabaseRepository.restaurants: fetched=${raw.size} mapped=${mapped.size}")
+            if (raw.isNotEmpty()) {
+                println("SupabaseRepository.restaurants: sample keys=${raw.first().keys}")
+            }
+            mapped
         } catch (t: Throwable) {
+            println("SupabaseRepository.restaurants: error=${t.message}")
+            t.printStackTrace()
             fallback.restaurants()
         }
     }
