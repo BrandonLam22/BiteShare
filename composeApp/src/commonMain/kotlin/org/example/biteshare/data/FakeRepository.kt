@@ -13,6 +13,7 @@ import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
+import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
 
 class FakeRepository(
@@ -110,7 +111,20 @@ class FakeRepository(
 
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
         val summary = getRestaurantById(id) ?: return null
-        return MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
+        val baseDetail = MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
+        val reviews = getReviewsForRestaurant(summary.name)
+        val averageRating = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: baseDetail.rating
+        return baseDetail.copy(
+            reviews = reviews,
+            rating = averageRating,
+        )
+    }
+
+    override suspend fun getReviewsForRestaurant(restaurantName: String): List<Review> =
+        model.getReviewsForRestaurant(restaurantName)
+
+    override suspend fun submitReview(review: Review) {
+        model.addReview(review)
     }
 
     override suspend fun getRestaurantsByTag(tag: String): List<Restaurant> {

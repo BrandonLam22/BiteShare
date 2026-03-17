@@ -47,6 +47,7 @@ class DetailViewModel(
             val initialMeal = MealTab.Lunch
             val initialSlots = slotsForMeal(initialMeal)
             val reviews = detail?.reviews.orEmpty()
+            val recentReviews = reviews.asReversed()
             uiState = uiState.copy(
                 restaurant = restaurant,
                 restaurantDetail = detail,
@@ -58,7 +59,7 @@ class DetailViewModel(
                 timeSlots = initialSlots,
                 selectedTimeSlot = initialSlots.firstOrNull(),
                 averageReviewScore = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0,
-                reviewHighlights = reviews.take(3),
+                reviewHighlights = recentReviews.take(3),
                 popularReviewTags = reviews
                     .flatMap { it.tags }
                     .groupingBy { it }

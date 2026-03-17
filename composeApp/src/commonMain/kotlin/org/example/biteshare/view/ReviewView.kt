@@ -158,12 +158,34 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        viewModel.postErrorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .padding(bottom = 12.dp)
+            )
+        }
+
+        viewModel.postStatusMessage?.let { message ->
+            Text(
+                text = message,
+                color = Color(0xFF2E7D32),
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .padding(bottom = 12.dp)
+            )
+        }
+
         LoginSignupButton(
-            text = "Post",
+            text = if (viewModel.isPosting) "Posting..." else "Post",
             onClick = {
-                // Trigger the onPostClicked() method to send data to Model
                 viewModel.onPostClicked()
-            }
+            },
+            enabled = !viewModel.isPosting,
         )
 
     }

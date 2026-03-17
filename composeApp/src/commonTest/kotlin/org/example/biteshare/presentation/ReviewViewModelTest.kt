@@ -116,10 +116,22 @@ class ReviewViewModelTest {
         val vm = ReviewViewModel(Model())
 
         // Act
-        val posted = vm.onPostClicked()
+        vm.onPostClicked()
 
         // Assert
-        assertFalse(posted)
         assertEquals("Please choose a restaurant from the list.", vm.restaurantSearchError)
+    }
+
+    @Test
+    fun onPostClickedRequiresReviewText() {
+        // Arrange
+        val vm = ReviewViewModel(Model())
+        vm.selectRestaurant("Joe's Pizza")
+
+        // Act
+        vm.onPostClicked()
+
+        // Assert
+        assertEquals("Please write a short review before posting.", vm.postErrorMessage)
     }
 }

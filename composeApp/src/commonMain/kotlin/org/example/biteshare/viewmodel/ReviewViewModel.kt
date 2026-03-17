@@ -12,7 +12,7 @@ import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.Review
 
 class ReviewViewModel(
-    private val model: Model,
+    model: Model,
     private val repo: BiteShareRepository = FakeRepository(model),
 ) {
     private val scope = MainScope()
@@ -26,6 +26,12 @@ class ReviewViewModel(
     var restaurantSuggestions by mutableStateOf<List<String>>(emptyList())
         private set
     var restaurantSearchError by mutableStateOf<String?>(null)
+        private set
+    var postStatusMessage by mutableStateOf<String?>(null)
+        private set
+    var postErrorMessage by mutableStateOf<String?>(null)
+        private set
+    var isPosting by mutableStateOf(false)
         private set
     var reviewText by mutableStateOf("")
     var rating by mutableStateOf(5)  // 1-10, default 5
@@ -70,6 +76,8 @@ class ReviewViewModel(
     fun updateRestaurantQuery(newQuery: String) {
         restaurantQuery = newQuery
         restaurantSearchError = null
+        postStatusMessage = null
+        postErrorMessage = null
 
         val normalizedQuery = newQuery.trim()
         if (normalizedQuery.isBlank()) {
@@ -95,6 +103,8 @@ class ReviewViewModel(
         restaurantQuery = name
         restaurantSuggestions = emptyList()
         restaurantSearchError = null
+        postStatusMessage = null
+        postErrorMessage = null
     }
 
     /**
@@ -105,12 +115,16 @@ class ReviewViewModel(
         restaurantQuery = ""
         restaurantSuggestions = emptyList()
         restaurantSearchError = null
+        postStatusMessage = null
+        postErrorMessage = null
     }
 
     // Logic for the one-line review character limit
     fun updateReviewText(newText: String) {
         if (newText.length <= 50) {
             reviewText = newText
+            postStatusMessage = null
+            postErrorMessage = null
         }
     }
 
@@ -120,6 +134,8 @@ class ReviewViewModel(
         } else {
             selectedTags.add(tag)
         }
+        postStatusMessage = null
+        postErrorMessage = null
     }
 
     /** Resets the form to default values (e.g. after a successful post). */
@@ -130,14 +146,21 @@ class ReviewViewModel(
         selectedTags.clear()
     }
 
-    fun onPostClicked(): Boolean {
+    fun onPostClicked() {
+        if (isPosting) return
+
         val chosenRestaurant = selectedRestaurantName?.takeIf { it.isNotBlank() }
         if (chosenRestaurant == null) {
             restaurantSearchError = "Please choose a restaurant from the list."
-            return false
+            return
         }
 
-        // 1. Create the Domain Object
+        if (reviewText.isBlank()) {
+            postErrorMessage = "Please write a short review before posting."
+            postStatusMessage = null
+            return
+        }
+
         val newReview = Review(
             restaurantName = chosenRestaurant,
             tags = this.selectedTags.toList(),
@@ -145,12 +168,21 @@ class ReviewViewModel(
             rating = this.rating
         )
 
-        // 2. Send it to the Model (We will write this next)
-        model.addReview(newReview)
+        isPosting = true
+        postErrorMessage = null
+        postStatusMessage = null
 
-        // reset so the next review starts with defaults
-        resetForm()
-        return true
+        scope.launch {
+            runCatching {
+                repo.submitReview(newReview)
+            }.onSuccess {
+                resetForm()
+                postStatusMessage = "Review posted successfully."
+            }.onFailure { error ->
+                postErrorMessage = error.message ?: "Failed to post review."
+            }
+            isPosting = false
+        }
     }
 
 }

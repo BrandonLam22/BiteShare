@@ -23,6 +23,7 @@ import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
 import kotlin.random.Random
 
@@ -33,6 +34,7 @@ class SupabaseRepository(
 ) : BiteShareRepository {
 
     private val usersTable = "users"
+    private val reviewsTable = "reviews"
 
     override suspend fun login(username: String, password: String): User? {
         val normalizedUsername = username.trim()
@@ -138,8 +140,63 @@ class SupabaseRepository(
     override suspend fun getRestaurantById(id: String): Restaurant? =
         restaurants().firstOrNull { it.id == id }
 
-    override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? =
-        fallback.getRestaurantDetailById(id)
+    override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
+        val summary = getRestaurantById(id) ?: return null
+        val baseDetail = fallback.getRestaurantDetailById(id) ?: return null
+        val reviews = getReviewsForRestaurant(summary.name)
+        val mergedReviews = (reviews + baseDetail.reviews)
+            .distinctBy { it.id }
+        val averageRating = mergedReviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: baseDetail.rating
+
+        return baseDetail.copy(
+            reviews = mergedReviews,
+            rating = averageRating,
+        )
+    }
+
+    override suspend fun getReviewsForRestaurant(restaurantName: String): List<Review> {
+        val normalizedName = restaurantName.trim()
+        if (normalizedName.isBlank()) return emptyList()
+
+        return try {
+            client.from(reviewsTable)
+                .select(Columns.raw("*")) {
+                    filter {
+                        eq("restaurant_name", normalizedName)
+                    }
+                }
+                .decodeList<JsonObject>()
+                .mapNotNull { it.toReview() }
+        } catch (t: Throwable) {
+            fallback.getReviewsForRestaurant(normalizedName)
+        }
+    }
+
+    override suspend fun submitReview(review: Review) {
+        val matchedRestaurant = restaurants().firstOrNull { restaurant ->
+            restaurant.name.equals(review.restaurantName, ignoreCase = true)
+        }
+        val currentUserId = model.currentUser?.id?.takeIf { it.isNotBlank() }
+
+        val newReviewJson = buildJsonObject {
+            put("id", review.id)
+            matchedRestaurant?.id?.let { restaurantId ->
+                put("restaurant_id", restaurantId)
+            }
+            put("restaurant_name", review.restaurantName)
+            currentUserId?.let { userId ->
+                put("user_id", userId)
+            }
+            put("rating", review.rating)
+            put("content", review.content)
+            put("tags", buildJsonArray {
+                review.tags.forEach { tag -> add(JsonPrimitive(tag)) }
+            })
+        }
+
+        client.from(reviewsTable).insert(newReviewJson)
+        model.addReview(review)
+    }
 
     override suspend fun getSavedRestaurants(): List<Restaurant> {
         val savedIds = model.getSavedRestaurantIds()
@@ -233,11 +290,27 @@ class SupabaseRepository(
         )
     }
 
+    private fun JsonObject.toReview(): Review? {
+        val restaurantName = getString("restaurant_name")
+        if (restaurantName.isBlank()) return null
+
+        return Review(
+            id = getString("id", Random.nextInt(0, 1_000_000).toString()),
+            restaurantName = restaurantName,
+            tags = getStringList("tags"),
+            content = getString("content"),
+            rating = getInt("rating", 5),
+        )
+    }
+
     private fun JsonObject.getString(key: String, fallback: String = ""): String =
         this[key]?.jsonPrimitive?.contentOrNull ?: fallback
 
     private fun JsonObject.getDouble(key: String, fallback: Double = 0.0): Double =
         this[key]?.jsonPrimitive?.doubleOrNull ?: fallback
+
+    private fun JsonObject.getInt(key: String, fallback: Int = 0): Int =
+        this[key]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: fallback
 
     private fun JsonObject.getBoolean(key: String, fallback: Boolean = false): Boolean =
         this[key]?.jsonPrimitive?.booleanOrNull ?: fallback
