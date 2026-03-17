@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.serialization.Serializable
 import org.example.biteshare.data.MockDB
 import org.example.biteshare.data.PickRepository
 
@@ -31,7 +32,7 @@ enum class CuisineFilter(val label: String) {
     COFFEE("Coffee"),
     ITALIAN("Italian"),
 }
-
+@Serializable
 data class Friend(
     val id: String,
     val name: String,

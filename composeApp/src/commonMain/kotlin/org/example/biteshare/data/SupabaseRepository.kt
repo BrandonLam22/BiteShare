@@ -150,13 +150,19 @@ class SupabaseRepository(
 
     private suspend fun fetchUserRow(): UserRow? {
         cachedUserRow?.let { return it }
-        val userId = resolveCurrentUserId() ?: return null
+        val userId = model.currentUser?.id ?: return null
         return try {
-            val row = client.from("users")
+            val row = client.from(usersTable)
                 .select { filter { eq("id", userId) } }
                 .decodeSingle<UserRow>()
-            cachedUserRow = row
-            row
+            val friendCount = client.from("friends")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<JsonObject>()
+                .size
+            println("fetchUserRow: userId=$userId")
+            val rowWithCount = row.copy(friendCount = friendCount)
+            cachedUserRow = rowWithCount
+            rowWithCount
         } catch (t: Throwable) {
             println("fetchUserRow error: ${t.message}")
             null
@@ -387,7 +393,33 @@ class SupabaseRepository(
         }
     }
 
-    override suspend fun friends(): List<Friend> = fallback.friends()
+ override suspend fun friends(): List<Friend> {
+        val userId = model.currentUser?.id ?: return fallback.friends()
+        return try {
+            val friendRows = client.from("friends")
+                .select(Columns.raw("*")) {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<JsonObject>()
+
+            friendRows.mapNotNull { row ->
+                val friendId = row.getString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val friendUser = client.from(usersTable)
+                    .select(Columns.list("id", "username")) {
+                        filter { eq("id", friendId) }
+                        limit(1)
+                    }
+                    .decodeSingleOrNull<JsonObject>() ?: return@mapNotNull null
+                Friend(
+                    id = friendId,
+                    name = friendUser.getString("username")
+                )
+            }
+        } catch (t: Throwable) {
+            println("friends error: ${t.message}")
+            fallback.friends()
+        }
+    }
 
     override suspend fun locations(): List<String> =
         restaurants().map { it.location }.distinct().sorted()

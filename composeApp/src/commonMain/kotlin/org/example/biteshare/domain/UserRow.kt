@@ -3,6 +3,7 @@ package org.example.biteshare.domain
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.jvm.Transient
 
 @Serializable
 data class UserRow(
@@ -13,5 +14,8 @@ data class UserRow(
     val preferences: List<String> = emptyList(),
     @SerialName("food_restrictions") val foodRestrictions: List<String> = emptyList(),
     @SerialName("notifications_enabled") val notificationsEnabled: Boolean = true,
-    @SerialName("friend_count") val friendCount: Int = 0
+    @Transient val friendCount: Int = 0
 )
+{
+    //var friendCount: Int = 0  // set manually after fetching
+}
