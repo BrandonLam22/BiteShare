@@ -25,4 +25,6 @@ interface BiteShareRepository : PickRepository {
     )
     suspend fun getPassword(): String
     suspend fun updatePassword(newPassword: String)
+
+    suspend fun verifyCurrentPassword(password: String): Boolean
 }

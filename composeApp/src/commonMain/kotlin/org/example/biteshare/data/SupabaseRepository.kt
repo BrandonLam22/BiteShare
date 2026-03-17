@@ -18,6 +18,10 @@ import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import org.example.biteshare.domain.UserRow
+import org.jetbrains.compose.resources.getString
 
 class SupabaseRepository(
     private val model: Model,
@@ -69,6 +73,23 @@ class SupabaseRepository(
         )
     }
 
+    private var cachedUserRow: UserRow? = null
+
+    private suspend fun fetchUserRow(): UserRow? {
+        cachedUserRow?.let { return it }
+        val userId = client.auth.currentUserOrNull()?.id ?: return null
+        return try {
+            val row = client.from("users")
+                .select { filter { eq("id", userId) } }
+                .decodeSingle<UserRow>()
+            cachedUserRow = row
+            row
+        } catch (t: Throwable) {
+            println("fetchUserRow error: ${t.message}")
+            null
+        }
+    }
+
     override suspend fun browseRestaurants(): List<Restaurant> = restaurants()
 
     override suspend fun getRestaurantsByTag(tag: String): List<Restaurant> {
@@ -96,26 +117,92 @@ class SupabaseRepository(
         model.toggleSavedRestaurant(restaurantId)
     }
 
-    override suspend fun getProfile(): ProfileData = fallback.getProfile()
+    override suspend fun getProfile(): ProfileData {
+        val row = fetchUserRow() ?: return fallback.getProfile()
+        return ProfileData(
+            name = row.username,
+            email = row.email,
+            friendCount = row.friendCount,
+            notificationsEnabled = row.notificationsEnabled
+        )
+    }
 
     override suspend fun updateNotificationPreference(enabled: Boolean) {
-        fallback.updateNotificationPreference(enabled)
+        val userId = client.auth.currentUserOrNull()?.id
+        if (userId == null) {
+            fallback.updateNotificationPreference(enabled)
+            return
+        }
+        try {
+            client.from("users").update({
+                set("notifications_enabled", enabled)
+            }) { filter { eq("id", userId) } }
+            cachedUserRow = cachedUserRow?.copy(notificationsEnabled = enabled) // update cache in place instead of clearing it
+        } catch (t: Throwable) {
+            println("updateNotificationPreference error: ${t.message}")
+            fallback.updateNotificationPreference(enabled)
+        }
     }
 
     override suspend fun logout() {
+        cachedUserRow = null
+        try {
+            client.auth.signOut()
+        } catch (t: Throwable) {
+            println("logout error: ${t.message}")
+        }
         fallback.logout()
     }
 
-    override suspend fun getEditableProfile(): EditableProfile = fallback.getEditableProfile()
+    override suspend fun getEditableProfile(): EditableProfile {
+        val row = fetchUserRow() ?: return fallback.getEditableProfile()
+        return EditableProfile(
+            username = row.username,
+            email = row.email,
+            bio = row.bio,
+            preferences = row.preferences,
+            foodRestrictions = row.foodRestrictions
+        )
+    }
+
+    override suspend fun verifyCurrentPassword(password: String): Boolean {
+        return try {
+            val email = client.auth.currentUserOrNull()?.email ?: return false
+            client.auth.signInWith(Email) {
+                this.email = email
+                this.password = password
+            }
+            true
+        } catch (t: Throwable) {
+            false
+        }
+    }
 
     override suspend fun updateProfile(
         username: String,
         email: String,
         bio: String,
         preferences: List<String>,
-        foodRestrictions: List<String>,
+        foodRestrictions: List<String>
     ) {
-        fallback.updateProfile(username, email, bio, preferences, foodRestrictions)
+        val userId = client.auth.currentUserOrNull()?.id
+        if (userId == null) {
+            fallback.updateProfile(username, email, bio, preferences, foodRestrictions)
+            return
+        }
+        try {
+            client.from("users").update({
+                set("username", username)
+                set("email", email)
+                set("bio", bio)
+                set("preferences", preferences)
+                set("food_restrictions", foodRestrictions)
+            }) { filter { eq("id", userId) } }
+            cachedUserRow = null  // invalidate so next fetch gets fresh data
+        } catch (t: Throwable) {
+            println("updateProfile error: ${t.message}")
+            fallback.updateProfile(username, email, bio, preferences, foodRestrictions)
+        }
     }
 
     override suspend fun friends(): List<Friend> = fallback.friends()
@@ -142,14 +229,24 @@ class SupabaseRepository(
         }
     }
 
-    override suspend fun userPreferences(): List<String> = fallback.userPreferences()
+    override suspend fun userPreferences(): List<String> {
+        return fetchUserRow()?.preferences ?: fallback.userPreferences()
+    }
 
-    override suspend fun userRestrictions(): List<String> = fallback.userRestrictions()
+    override suspend fun userRestrictions(): List<String> {
+        return fetchUserRow()?.foodRestrictions ?: fallback.userRestrictions()
+    }
 
-    override suspend fun getPassword(): String = fallback.getPassword()
+
+    override suspend fun getPassword(): String = ""
 
     override suspend fun updatePassword(newPassword: String) {
-        fallback.updatePassword(newPassword)
+        try {
+            client.auth.updateUser { password = newPassword }
+        } catch (t: Throwable) {
+            println("updatePassword error: ${t.message}")
+            fallback.updatePassword(newPassword)
+        }
     }
 
     private fun JsonObject.toDomain(savedIds: Set<String>): Restaurant? {

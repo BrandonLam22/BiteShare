@@ -36,7 +36,7 @@ class ChangePasswordViewModel(private val repo: BiteShareRepository) {
         uiState = uiState.copy(confirmPassword = value, confirmPasswordError = null)
     }
 
-    fun save() {
+    /*fun save() {
         val snapshot = uiState
         scope.launch {
             var valid = true
@@ -60,5 +60,35 @@ class ChangePasswordViewModel(private val repo: BiteShareRepository) {
                 uiState = uiState.copy(isSaved = true)
             }
         }
+    }*/
+
+    fun save() {
+        val snapshot = uiState
+        scope.launch {
+            var valid = true
+
+            // Validate new password and confirm match first
+            if (snapshot.newPassword.length < 8) {
+                uiState = uiState.copy(newPasswordError = "Must be at least 8 characters")
+                valid = false
+            }
+            if (snapshot.newPassword != snapshot.confirmPassword) {
+                uiState = uiState.copy(confirmPasswordError = "Passwords do not match")
+                valid = false
+            }
+
+            if (!valid) return@launch
+
+            // Verify current password via re-authentication
+            val verified = repo.verifyCurrentPassword(snapshot.currentPassword)
+            if (!verified) {
+                uiState = uiState.copy(currentPasswordError = "Incorrect current password")
+                return@launch
+            }
+
+            repo.updatePassword(snapshot.newPassword)
+            uiState = uiState.copy(isSaved = true)
+        }
     }
+
 }

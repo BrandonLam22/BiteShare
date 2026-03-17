@@ -284,4 +284,8 @@ class FakeRepository(
     override suspend fun updatePassword(newPassword: String) {
         model.updateUserPassword(newPassword)
     }
+
+    override suspend fun verifyCurrentPassword(password: String): Boolean {
+        return password == getPassword()
+    }
 }
