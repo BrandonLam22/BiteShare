@@ -38,6 +38,15 @@ data class Friend(
     val name: String,
 )
 
+enum class FriendAddResult {
+    SUCCESS,
+    EMPTY_INPUT,
+    SELF_NOT_ALLOWED,
+    ALREADY_FRIENDS,
+    NOT_FOUND,
+    ERROR,
+}
+
 data class Restaurant(
     val id: String,
     val name: String,
@@ -79,6 +88,10 @@ class PickModel(
     private val repo: PickRepository,
 ) {
     suspend fun friends(): List<Friend> = repo.friends()
+
+    suspend fun searchUsers(query: String): List<Friend> = repo.searchUsers(query)
+
+    suspend fun addFriend(friendId: String): FriendAddResult = repo.addFriend(friendId)
 
     suspend fun locations(): List<String> = repo.locations()
 

@@ -24,6 +24,10 @@ class FriendsListViewModel(
         loadFriends()
     }
 
+    fun refresh() {
+        loadFriends()
+    }
+
     private fun loadFriends() {
         scope.launch {
             val friends = repo.friends()

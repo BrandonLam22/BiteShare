@@ -4,6 +4,7 @@ import org.example.biteshare.domain.CategoryItem
 import org.example.biteshare.domain.EditableProfile
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.FriendAddResult
 import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
@@ -42,6 +43,59 @@ class FakeRepository(
     private val voteSessions = mutableListOf<VoteSession>()
 
     override suspend fun friends(): List<Friend> = model.currentUser?.friends ?: MockDB.fakeFriends
+
+    override suspend fun searchUsers(query: String): List<Friend> {
+        val needle = query.trim().lowercase()
+        if (needle.isBlank()) return emptyList()
+        val currentUser = model.currentUser
+
+        return MockDB.fakeUsers
+            .asSequence()
+            .filter { user -> user.id != currentUser?.id }
+            .filter { user ->
+                user.id.lowercase().contains(needle) ||
+                user.username.lowercase().contains(needle) ||
+                    user.email.lowercase().contains(needle)
+            }
+            .map { user -> Friend(id = user.id, name = user.username) }
+            .sortedWith(
+                compareBy<Friend> { friend -> searchRank(friend, needle) }
+                    .thenBy { it.name.lowercase() }
+                    .thenBy { it.id.lowercase() }
+            )
+    }
+
+    override suspend fun addFriend(friendId: String): FriendAddResult {
+        val normalizedId = friendId.trim()
+        if (normalizedId.isBlank()) return FriendAddResult.EMPTY_INPUT
+
+        val currentUser = model.currentUser ?: return FriendAddResult.ERROR
+        if (normalizedId == currentUser.id) return FriendAddResult.SELF_NOT_ALLOWED
+        if (currentUser.friends.any { it.id == normalizedId }) return FriendAddResult.ALREADY_FRIENDS
+
+        val targetUser = MockDB.fakeUsers.firstOrNull { user -> user.id == normalizedId }
+            ?: return FriendAddResult.NOT_FOUND
+
+        val updatedUser = currentUser.copy(
+            friends = currentUser.friends + Friend(id = targetUser.id, name = targetUser.username)
+        )
+        model.applyAuthenticatedUser(updatedUser)
+        return FriendAddResult.SUCCESS
+    }
+
+    override suspend fun removeFriend(friendId: String): Boolean {
+        val normalizedId = friendId.trim()
+        if (normalizedId.isBlank()) return false
+
+        val currentUser = model.currentUser ?: return false
+        if (currentUser.friends.none { it.id == normalizedId }) return false
+
+        val updatedUser = currentUser.copy(
+            friends = currentUser.friends.filterNot { it.id == normalizedId }
+        )
+        model.applyAuthenticatedUser(updatedUser)
+        return true
+    }
 
     override suspend fun restaurants(): List<Restaurant> {
         val savedIds = effectiveSavedIds()
@@ -135,6 +189,28 @@ class FakeRepository(
         val all = (restaurants() + browseRestaurants()).distinctBy { it.id }
         if (targetTypes.isEmpty()) return all
         return all.filter { restaurant -> classifyRestaurantTypes(restaurant).any { it in targetTypes } }
+    }
+
+    override suspend fun searchRestaurants(query: String, source: List<Restaurant>): List<Restaurant> {
+        val needle = normalizeTag(query)
+        val pool = if (source.isNotEmpty()) source else (restaurants() + browseRestaurants()).distinctBy { it.id }
+        if (needle.isBlank()) return pool
+
+        return pool.filter { restaurant ->
+            val detail = MockDB.restaurantDetails[restaurant.id]
+            val haystack = buildString {
+                append(normalizeTag(restaurant.name))
+                append(" ")
+                append(normalizeTag(restaurant.category))
+                append(" ")
+                append(normalizeTag(restaurant.location))
+                append(" ")
+                append(normalizeTag(detail?.description.orEmpty()))
+                append(" ")
+                append(normalizeTag(detail?.attributes?.joinToString(" ").orEmpty()))
+            }
+            haystack.contains(needle)
+        }
     }
 
     override suspend fun locations(): List<String> =
@@ -365,5 +441,16 @@ class FakeRepository(
 
     override suspend fun verifyCurrentPassword(password: String): Boolean {
         return password == getPassword()
+    }
+
+    private fun searchRank(friend: Friend, needle: String): Int {
+        val id = friend.id.lowercase()
+        val name = friend.name.lowercase()
+        return when {
+            name == needle || id == needle -> 0
+            name.startsWith(needle) || id.startsWith(needle) -> 1
+            name.contains(needle) || id.contains(needle) -> 2
+            else -> 3
+        }
     }
 }

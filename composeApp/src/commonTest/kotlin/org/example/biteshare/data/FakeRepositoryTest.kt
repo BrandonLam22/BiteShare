@@ -1,6 +1,7 @@
 package org.example.biteshare.data
 
 import org.example.biteshare.domain.Model
+import org.example.biteshare.domain.FriendAddResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -146,6 +147,51 @@ class FakeRepositoryTest {
         assertTrue(locations.isNotEmpty())
         assertEquals(locations.sorted(), locations)
         assertEquals(locations.toSet().size, locations.size)
+    }
+
+    @Test
+    fun searchRestaurantsShouldFindSpecificRestaurantByName() {
+        val result = repo.searchRestaurants("Ken Sushi")
+
+        assertTrue(result.isNotEmpty())
+        assertTrue(result.any { it.name == "Ken Sushi House" })
+    }
+
+    @Test
+    fun searchRestaurantsShouldMatchAttributesAndDescriptions() {
+        val result = repo.searchRestaurants("halal")
+
+        assertTrue(result.isNotEmpty())
+        assertTrue(result.any { it.name.contains("Lazeez", ignoreCase = true) })
+    }
+
+    @Test
+    fun searchUsersShouldReturnOnlyEligibleUsers() {
+        val repo = loggedInRepo()
+
+        val results = repo.searchUsers("ali")
+
+        assertEquals(1, results.size)
+        assertEquals("user_03", results.first().id)
+        assertEquals("Alice", results.first().name)
+    }
+
+    @Test
+    fun addFriendShouldAppendNewFriendToCurrentUser() {
+        val repo = loggedInRepo()
+
+        val result = repo.addFriend("user_03")
+
+        assertEquals(FriendAddResult.SUCCESS, result)
+        assertTrue(repo.friends().any { it.id == "user_03" && it.name == "Alice" })
+    }
+
+    @Test
+    fun addFriendShouldRejectDuplicateFriend() {
+        val repo = loggedInRepo()
+
+        assertEquals(FriendAddResult.SUCCESS, repo.addFriend("user_03"))
+        assertEquals(FriendAddResult.ALREADY_FRIENDS, repo.addFriend("user_03"))
     }
 
     // ── Profile & User Management ──────────────────────────────────────────────

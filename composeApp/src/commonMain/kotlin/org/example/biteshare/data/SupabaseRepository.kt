@@ -180,6 +180,32 @@ class SupabaseRepository(
         }
     }
 
+    override suspend fun searchRestaurants(query: String, source: List<Restaurant>): List<Restaurant> {
+        val needle = query.lowercase().trim()
+        val pool = if (source.isNotEmpty()) source else restaurants()
+        if (needle.isBlank()) return pool
+        val detailsByRestaurantId = runCatching {
+            client.postgrest["restaurant_details"]
+                .select(Columns.raw("restaurant_id, description, attributes"))
+                .decodeList<JsonObject>()
+                .associateBy { row -> row.getString("restaurant_id") }
+        }.getOrDefault(emptyMap())
+
+        return pool.filter { restaurant ->
+            val detail = detailsByRestaurantId[restaurant.id]
+            val description = detail?.getString("description").orEmpty().lowercase()
+            val attributes = detail?.getStringList("attributes")
+                ?.joinToString(" ")
+                .orEmpty()
+                .lowercase()
+            restaurant.name.lowercase().contains(needle) ||
+                restaurant.category.lowercase().contains(needle) ||
+                restaurant.location.lowercase().contains(needle) ||
+                description.contains(needle) ||
+                attributes.contains(needle)
+        }
+    }
+
     override suspend fun getRestaurantById(id: String): Restaurant? =
         restaurants().firstOrNull { it.id == id }
 

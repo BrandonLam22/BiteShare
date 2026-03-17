@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.FriendAddResult
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
@@ -51,6 +52,85 @@ class PickDbRepository(
                 Friend(id = id, name = name)
             }
         }.getOrElse { emptyList() }
+
+    override suspend fun searchUsers(query: String): List<Friend> =
+        runCatching {
+            val needle = query.trim().lowercase()
+            if (needle.isBlank()) return@runCatching emptyList()
+
+            val userId = effectiveUserId()
+            val rawUsers = client.postgrest[usersTable]
+                .select(Columns.raw("id, username, email"))
+                .decodeList<JsonObject>()
+
+            rawUsers.mapNotNull { row ->
+                val id = row.getString("id")
+                val username = row.getString("username")
+                val email = row.getString("email")
+                if (id.isBlank() || username.isBlank()) return@mapNotNull null
+                if (id == userId) return@mapNotNull null
+                val matches = id.lowercase().contains(needle) ||
+                    username.lowercase().contains(needle) ||
+                    email.lowercase().contains(needle)
+                if (!matches) return@mapNotNull null
+                Friend(id = id, name = username)
+            }.sortedWith(
+                compareBy<Friend> { friend -> searchRank(friend, needle) }
+                    .thenBy { it.name.lowercase() }
+                    .thenBy { it.id.lowercase() }
+            )
+        }.getOrElse { emptyList() }
+
+    override suspend fun addFriend(friendId: String): FriendAddResult =
+        runCatching {
+            val normalizedId = friendId.trim()
+            if (normalizedId.isBlank()) return@runCatching FriendAddResult.EMPTY_INPUT
+
+            val userId = effectiveUserId()
+            if (normalizedId == userId) return@runCatching FriendAddResult.SELF_NOT_ALLOWED
+
+            val existingFriendIds = friends().map { it.id }.toSet()
+            if (normalizedId in existingFriendIds) return@runCatching FriendAddResult.ALREADY_FRIENDS
+
+            val userRow = client.postgrest[usersTable]
+                .select(Columns.raw("id, username")) {
+                    filter { eq("id", normalizedId) }
+                    limit(1)
+                }
+                .decodeList<JsonObject>()
+                .firstOrNull()
+                ?: return@runCatching FriendAddResult.NOT_FOUND
+
+            client.postgrest[friendsTable].insert(
+                buildJsonObject {
+                    put("id", normalizedId)
+                    put("user_id", userId)
+                    put("name", userRow.getString("username").ifBlank { normalizedId })
+                }
+            )
+            FriendAddResult.SUCCESS
+        }.getOrElse { throwable ->
+            println("addFriend error: ${throwable.message}")
+            FriendAddResult.ERROR
+        }
+
+    override suspend fun removeFriend(friendId: String): Boolean =
+        runCatching {
+            val normalizedId = friendId.trim()
+            if (normalizedId.isBlank()) return@runCatching false
+
+            val userId = effectiveUserId()
+            client.postgrest[friendsTable].delete {
+                filter {
+                    eq("user_id", userId)
+                    eq("id", normalizedId)
+                }
+            }
+            true
+        }.getOrElse { throwable ->
+            println("removeFriend error: ${throwable.message}")
+            false
+        }
 
     override suspend fun locations(): List<String> =
         restaurants().map { it.location }.distinct().sorted()
@@ -506,6 +586,17 @@ class PickDbRepository(
 
     private fun JsonObject.getLong(key: String, fallback: Long = 0L): Long {
         return this[key]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: fallback
+    }
+
+    private fun searchRank(friend: Friend, needle: String): Int {
+        val id = friend.id.lowercase()
+        val name = friend.name.lowercase()
+        return when {
+            name == needle || id == needle -> 0
+            name.startsWith(needle) || id.startsWith(needle) -> 1
+            name.contains(needle) || id.contains(needle) -> 2
+            else -> 3
+        }
     }
 
 }

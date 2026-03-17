@@ -11,6 +11,7 @@ import org.example.biteshare.domain.Restaurant
 data class BrowseUiState(
     val allRestaurants: List<Restaurant> = emptyList(),
     val restaurants: List<Restaurant> = emptyList(),
+    val searchQuery: String = "",
     val resultCount: Int = 0,
     val locationLabel: String = "Addis Ababa",
     val priceLabel: String = "$$$",
@@ -44,24 +45,43 @@ class BrowseViewModel(
     }
 
     fun applyTagFilter(tag: String) {
-        scope.launch {
-            val filtered = repo.getRestaurantsByTag(tag)
-            uiState = uiState.copy(
-                restaurants = filtered,
-                resultCount = filtered.size,
-                activeTag = tag,
-                headerTitle = "Top $tag Places",
-            )
-        }
+        uiState = uiState.copy(
+            activeTag = tag,
+            headerTitle = "Top $tag Places",
+        )
+        refreshResults()
     }
 
     fun clearTagFilter() {
-        val all = uiState.allRestaurants
         uiState = uiState.copy(
-            restaurants = all,
-            resultCount = all.size,
             activeTag = null,
             headerTitle = "Top Food Places",
         )
+        refreshResults()
+    }
+
+    fun updateSearchQuery(query: String) {
+        uiState = uiState.copy(searchQuery = query)
+        refreshResults()
+    }
+
+    fun clearSearch() {
+        uiState = uiState.copy(searchQuery = "")
+        refreshResults()
+    }
+
+    private fun refreshResults() {
+        scope.launch {
+            val base = if (uiState.activeTag != null) {
+                repo.getRestaurantsByTag(uiState.activeTag!!)
+            } else {
+                uiState.allRestaurants
+            }
+            val filtered = repo.searchRestaurants(uiState.searchQuery, base)
+            uiState = uiState.copy(
+                restaurants = filtered,
+                resultCount = filtered.size,
+            )
+        }
     }
 }

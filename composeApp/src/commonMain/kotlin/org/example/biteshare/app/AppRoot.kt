@@ -98,7 +98,7 @@ fun AppRoot(model: Model) {
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
 
-    val homeVm = remember(repo) { HomeViewModel(repo) }
+    val homeVm = remember(repo, pickRepo) { HomeViewModel(repo, pickRepo) }
     val browseVm = remember(repo) { BrowseViewModel(repo) }
     val pickVm = remember(pickModel) { PickForMeViewModel(pickModel) }
     val recVm = remember(pickModel) { RecommendsViewModel(pickModel) }
@@ -154,11 +154,22 @@ fun AppRoot(model: Model) {
                         HomeRoute.Main -> {
                             HomeView(
                                 vm = homeVm,
-                                onSearchClick = {
+                                onRestaurantSearch = { query ->
                                     browseVm.clearTagFilter()
+                                    if (query.isBlank()) {
+                                        browseVm.clearSearch()
+                                    } else {
+                                        browseVm.updateSearchQuery(query)
+                                    }
+                                    homeRoute = HomeRoute.Browse
+                                },
+                                onRestaurantBrowseClick = {
+                                    browseVm.clearTagFilter()
+                                    browseVm.clearSearch()
                                     homeRoute = HomeRoute.Browse
                                 },
                                 onTagClick = { tag ->
+                                    browseVm.clearSearch()
                                     browseVm.applyTagFilter(tag)
                                     homeRoute = HomeRoute.Browse
                                 }
@@ -314,6 +325,9 @@ fun AppRoot(model: Model) {
                                     vm = friendsListVm,
                                     onBack = { profileRoute = ProfileRoute.Main }
                                 )
+                            }
+                            LaunchedEffect(Unit) {
+                                friendsListVm.refresh()
                             }
                             view.Content()
                         }

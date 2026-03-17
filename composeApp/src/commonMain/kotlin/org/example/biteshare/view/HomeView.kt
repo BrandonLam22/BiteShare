@@ -2,6 +2,7 @@ package org.example.biteshare.view
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,13 +11,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.domain.CategoryItem
+import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PopularItem
+import org.example.biteshare.viewmodel.HomeSearchMode
 import org.example.biteshare.viewmodel.HomeViewModel
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -41,14 +49,16 @@ private fun popularImageRes(title: String): DrawableResource? {
 
 class HomeView(
     private val vm: HomeViewModel,
-    private val onSearchClick: () -> Unit,
+    private val onRestaurantSearch: (String) -> Unit,
     private val onTagClick: (String) -> Unit = {},
+    private val onRestaurantBrowseClick: () -> Unit = {},
     private val onSettingsClick: () -> Unit = {},
 ) {
 
     @Composable
     fun Content() {
         val s = vm.uiState
+        var searchMenuExpanded by remember { mutableStateOf(false) }
         if (s.isLoading && s.categories.isEmpty()) {
             LoadingState()
             return
@@ -81,7 +91,7 @@ class HomeView(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = s.greeting,
+                        text = "Hi, Weclome to BiteShare.",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -115,7 +125,6 @@ class HomeView(
             Spacer(Modifier.height(20.dp))
 
             Surface(
-                onClick = onSearchClick,
                 shape = RoundedCornerShape(12.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     2.dp,
@@ -126,16 +135,118 @@ class HomeView(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("🔍", style = MaterialTheme.typography.bodyLarge)
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = "Search",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { searchMenuExpanded = true }
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = s.searchMode.label,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "⌄",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = searchMenuExpanded,
+                            onDismissRequest = { searchMenuExpanded = false }
+                        ) {
+                            HomeSearchMode.entries.forEach { mode ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(mode.label)
+                                            Text(
+                                                text = if (mode == s.searchMode) "✓" else "",
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        vm.setSearchMode(mode)
+                                        searchMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    VerticalDivider(
+                        modifier = Modifier.height(24.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
+                    OutlinedTextField(
+                        value = s.searchQuery,
+                        onValueChange = vm::updateSearchQuery,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 56.dp),
+                        singleLine = true,
+                        placeholder = {
+                            Text(
+                                if (s.searchMode == HomeSearchMode.RESTAURANT) {
+                                    "Search restaurants"
+                                } else {
+                                    "Search name or user id"
+                                }
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Button(
+                        onClick = {
+                            if (s.searchMode == HomeSearchMode.RESTAURANT) {
+                                onRestaurantSearch(s.searchQuery)
+                            } else {
+                                vm.searchFriends()
+                            }
+                        },
+                        enabled = s.searchQuery.isNotBlank() && !s.isFriendActionLoading
+                    ) {
+                        Text("Search")
+                    }
+                }
+            }
+
+            if (s.searchMode == HomeSearchMode.FRIEND) {
+                Spacer(Modifier.height(12.dp))
+
+                if (s.friendActionMessage != null) {
+                    Text(
+                        text = s.friendActionMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                if (s.friendSearchResults.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        s.friendSearchResults.forEach { friend ->
+                            FriendSearchResultCard(
+                                friend = friend,
+                                isFriend = friend.id in s.currentFriendIds,
+                                enabled = !s.isFriendActionLoading,
+                                onToggle = { vm.toggleFriend(friend) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
                 }
             }
 
@@ -174,7 +285,7 @@ class HomeView(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                TextButton(onClick = onSearchClick) {
+                TextButton(onClick = onRestaurantBrowseClick) {
                     Text("See all", color = MaterialTheme.colorScheme.primary)
                 }
             }
@@ -205,7 +316,7 @@ class HomeView(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                TextButton(onClick = onSearchClick) {
+                TextButton(onClick = onRestaurantBrowseClick) {
                     Text("See all", color = MaterialTheme.colorScheme.primary)
                 }
             }
@@ -392,6 +503,61 @@ class HomeView(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun FriendSearchResultCard(
+        friend: Friend,
+        isFriend: Boolean,
+        enabled: Boolean,
+        onToggle: () -> Unit,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 1.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = friend.name.take(1).uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = friend.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = friend.id,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalButton(
+                    onClick = onToggle,
+                    enabled = enabled,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(if (isFriend) "−" else "+")
                 }
             }
         }

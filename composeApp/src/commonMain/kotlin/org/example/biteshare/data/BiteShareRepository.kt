@@ -17,6 +17,7 @@ interface BiteShareRepository : PickRepository {
     suspend fun getHomeFeed(userName: String): HomeFeed
     suspend fun browseRestaurants(): List<Restaurant>
     suspend fun getRestaurantsByTag(tag: String): List<Restaurant>
+    suspend fun searchRestaurants(query: String, source: List<Restaurant> = emptyList()): List<Restaurant>
     suspend fun getRestaurantById(id: String): Restaurant?
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail?
     suspend fun getReviewsForRestaurant(restaurantName: String): List<Review>
