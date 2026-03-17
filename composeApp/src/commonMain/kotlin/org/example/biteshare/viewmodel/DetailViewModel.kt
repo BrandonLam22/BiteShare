@@ -58,6 +58,7 @@ class DetailViewModel(
                 timeSlots = initialSlots,
                 selectedTimeSlot = initialSlots.firstOrNull(),
                 averageReviewScore = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0,
+                // Supabase reviews are merged in ahead of fallback reviews, so keep this order.
                 reviewHighlights = reviews.take(3),
                 popularReviewTags = reviews
                     .flatMap { it.tags }

@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.Instant
 import org.example.biteshare.viewmodel.DetailViewModel
 import org.example.biteshare.viewmodel.MealTab
 import org.jetbrains.compose.resources.DrawableResource
@@ -441,7 +443,7 @@ class DetailView(
                     )
                     Spacer(Modifier.height(10.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        s.reviewHighlights.forEachIndexed { index, review ->
+                        s.reviewHighlights.forEach { review ->
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 tonalElevation = 1.dp,
@@ -455,12 +457,12 @@ class DetailView(
                                     ) {
                                         Column {
                                             Text(
-                                                text = "Reviewer #${review.id.takeLast(3)}",
+                                                text = review.username ?: "Anonymous Reviewer",
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             Text(
-                                                text = postedTimeLabel(index),
+                                                text = postedTimeLabel(review.createdAt),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -530,11 +532,20 @@ class DetailView(
         return rounded.toString()
     }
 
-    private fun postedTimeLabel(index: Int): String {
-        return when (index) {
-            0 -> "Posted 2 days ago"
-            1 -> "Posted 5 days ago"
-            else -> "Posted 1 week ago"
-        }
+    private fun postedTimeLabel(createdAt: String?): String {
+        if (createdAt.isNullOrBlank()) return "Recently posted"
+
+        return runCatching {
+            val postedAt = Instant.parse(createdAt)
+            val elapsedSeconds = (Clock.System.now() - postedAt).inWholeSeconds.coerceAtLeast(0)
+
+            when {
+                elapsedSeconds < 60 -> "Posted just now"
+                elapsedSeconds < 3_600 -> "Posted ${elapsedSeconds / 60} minute${if (elapsedSeconds / 60 == 1L) "" else "s"} ago"
+                elapsedSeconds < 86_400 -> "Posted ${elapsedSeconds / 3_600} hour${if (elapsedSeconds / 3_600 == 1L) "" else "s"} ago"
+                elapsedSeconds < 604_800 -> "Posted ${elapsedSeconds / 86_400} day${if (elapsedSeconds / 86_400 == 1L) "" else "s"} ago"
+                else -> "Posted ${elapsedSeconds / 604_800} week${if (elapsedSeconds / 604_800 == 1L) "" else "s"} ago"
+            }
+        }.getOrDefault("Recently posted")
     }
 }

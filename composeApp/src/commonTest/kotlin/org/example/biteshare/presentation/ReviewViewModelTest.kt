@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit tests for ReviewViewModel (presentation layer).
- * Tests tag selection and character limit; ViewModel does not yet take Model.
+ * Tests tag selection, review validation, and character limit.
  */
 class ReviewViewModelTest {
 
@@ -79,5 +79,59 @@ class ReviewViewModelTest {
         assertTrue(vm.availableTags.contains("Good Taste"))
         assertTrue(vm.availableTags.contains("Economical"))
         assertTrue(vm.availableTags.isNotEmpty())
+    }
+
+    @Test
+    fun selectRestaurantStoresSelectionAndClearsSuggestions() {
+        // Arrange
+        val vm = ReviewViewModel(Model())
+
+        // Act
+        vm.selectRestaurant("Joe's Pizza")
+
+        // Assert
+        assertEquals("Joe's Pizza", vm.restaurantName)
+        assertEquals("Joe's Pizza", vm.restaurantQuery)
+        assertTrue(vm.restaurantSuggestions.isEmpty())
+    }
+
+    @Test
+    fun clearSelectedRestaurantResetsSearchState() {
+        // Arrange
+        val vm = ReviewViewModel(Model())
+        vm.selectRestaurant("Joe's Pizza")
+
+        // Act
+        vm.clearSelectedRestaurant()
+
+        // Assert
+        assertEquals("", vm.restaurantName)
+        assertEquals("", vm.restaurantQuery)
+        assertTrue(vm.restaurantSuggestions.isEmpty())
+    }
+
+    @Test
+    fun onPostClickedRequiresRestaurantSelection() {
+        // Arrange
+        val vm = ReviewViewModel(Model())
+
+        // Act
+        vm.onPostClicked()
+
+        // Assert
+        assertEquals("Please choose a restaurant from the list.", vm.restaurantSearchError)
+    }
+
+    @Test
+    fun onPostClickedRequiresReviewText() {
+        // Arrange
+        val vm = ReviewViewModel(Model())
+        vm.selectRestaurant("Joe's Pizza")
+
+        // Act
+        vm.onPostClicked()
+
+        // Assert
+        assertEquals("Please write a short review before posting.", vm.postErrorMessage)
     }
 }

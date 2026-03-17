@@ -4,25 +4,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,14 +39,6 @@ import androidx.compose.material3.SliderDefaults
 @Preview
 @Composable
 fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
-    // These would move to ReviewViewModel later for proper MVVM
-//    var restaurantName by remember { mutableStateOf("") }
-//    var reviewText by remember { mutableStateOf("") }
-//    val selectedTags = remember { mutableStateListOf<String>() }
-//    val availableTags = listOf("I hate it!", "Wait long", "Economical",
-//                               "Too Spicy", "Good Taste", "Expensive",
-//                               "Come Back", "Too Salty", "Raw")
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,23 +59,7 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
         Spacer(modifier = Modifier.height(28.dp))
 
         // SECTION 2: RESTAURANT SEARCH
-        OutlinedTextField(
-            value = viewModel.restaurantName, // read from ViewModel
-            onValueChange = { viewModel.restaurantName = it }, // Write to ViewModel
-            placeholder = {
-                Text(
-                    text = "Restaurant Name",
-                    fontSize = 16.sp,
-                    color = Color.Gray
-                )},
-            modifier = Modifier
-                .fillMaxWidth(0.9f),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFFFF7A00),
-                unfocusedBorderColor = Color(0xFFFF8C00)
-            )
-        )
+        RestaurantSearchField(viewModel = viewModel)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -182,14 +158,172 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        viewModel.postErrorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .padding(bottom = 12.dp)
+            )
+        }
+
+        viewModel.postStatusMessage?.let { message ->
+            Text(
+                text = message,
+                color = Color(0xFF2E7D32),
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .padding(bottom = 12.dp)
+            )
+        }
+
         LoginSignupButton(
-            text = "Post",
+            text = if (viewModel.isPosting) "Posting..." else "Post",
             onClick = {
-                // Trigger the onPostClicked() method to send data to Model
                 viewModel.onPostClicked()
-            }
+            },
+            enabled = !viewModel.isPosting,
         )
 
+    }
+}
+
+/**
+ * Displays the restaurant search UI for the review page.
+ * Shows a text field with suggestions, or a selected chip with an X button
+ */
+@Composable
+private fun RestaurantSearchField(viewModel: ReviewViewModel) {
+    val orange = Color(0xFFFF7A00)
+    val lightOrange = Color(0xFFFF8C00)
+
+    Column(modifier = Modifier.fillMaxWidth(0.9f)) {
+        if (viewModel.selectedRestaurantName != null) {
+            InputChip(
+                selected = true,
+                onClick = {},
+                label = {
+                    Text(
+                        text = viewModel.selectedRestaurantName.orEmpty(),
+                        fontSize = 16.sp
+                    )
+                },
+                trailingIcon = {
+                    IconButton(
+                        onClick = { viewModel.clearSelectedRestaurant() },
+                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Text("✕", color = orange, fontSize = 14.sp)
+                    }
+                },
+                colors = InputChipDefaults.inputChipColors(
+                    selectedContainerColor = Color(0xFFFFF0E1),
+                    selectedLabelColor = Color.Black,
+                    selectedTrailingIconColor = orange
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            OutlinedTextField(
+                value = viewModel.restaurantQuery,
+                onValueChange = { viewModel.updateRestaurantQuery(it) },
+                placeholder = {
+                    Text(
+                        text = "Search restaurant by name",
+                        fontSize = 16.sp,
+                        color = Color.Gray
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = orange,
+                    unfocusedBorderColor = lightOrange
+                )
+            )
+
+            if (viewModel.restaurantSuggestions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White,
+                    shadowElevation = 3.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        viewModel.restaurantSuggestions.forEachIndexed { index, name ->
+                            SuggestionItem(
+                                name = name,
+                                onClick = { viewModel.selectRestaurant(name) }
+                            )
+                            if (index < viewModel.restaurantSuggestions.lastIndex) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(Color(0xFFFFE0CC))
+                                )
+                            }
+                        }
+                    }
+                }
+            } else if (viewModel.restaurantQuery.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "No restaurant matches that prefix yet.",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+        }
+
+        viewModel.restaurantSearchError?.let { error ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = error,
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Displays one clickable restaurant suggestion in the dropdown list.
+ */
+@Composable
+private fun SuggestionItem(
+    name: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        color = Color.White,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = name,
+                fontSize = 15.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Select",
+                color = Color(0xFFFF7A00),
+                fontSize = 13.sp
+            )
+        }
     }
 }
 
