@@ -470,4 +470,8 @@ class Model {
         currentUser = currentUser?.copy(password = newPassword)
     }
 
+    fun applyAuthenticatedUser(user: User?) {
+        currentUser = user
+    }
+
 }

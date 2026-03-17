@@ -6,8 +6,13 @@ import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.User
 
 interface BiteShareRepository {
+    // Login/Signup
+    suspend fun login(username: String, password: String): User?
+    suspend fun signup(username: String, password: String, email: String): User?
+
     suspend fun getHomeFeed(userName: String): HomeFeed
     suspend fun browseRestaurants(): List<Restaurant>
     suspend fun getRestaurantsByTag(tag: String): List<Restaurant>

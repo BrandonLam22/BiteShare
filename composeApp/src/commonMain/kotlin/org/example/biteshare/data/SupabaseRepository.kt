@@ -4,11 +4,16 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.example.biteshare.domain.CategoryItem
 import org.example.biteshare.domain.EditableProfile
 import org.example.biteshare.domain.Friend
@@ -18,12 +23,65 @@ import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.User
+import kotlin.random.Random
 
 class SupabaseRepository(
     private val model: Model,
     private val client: SupabaseClient = SupabaseClientProvider.client,
     private val fallback: FakeRepository = FakeRepository(model),
 ) : BiteShareRepository {
+
+    private val usersTable = "users"
+
+    override suspend fun login(username: String, password: String): User? {
+        val normalizedUsername = username.trim()
+
+        return client.from(usersTable)
+            .select(Columns.raw("*")) {
+                filter {
+                    eq("username", normalizedUsername)
+                    eq("password", password)
+                }
+                limit(1)
+            }
+            .decodeSingleOrNull<JsonObject>()
+            ?.toUser()
+    }
+
+    override suspend fun signup(username: String, password: String, email: String): User? {
+        val normalizedUsername = username.trim()
+        val normalizedEmail = email.trim().lowercase()
+        val alreadyExists = client.from(usersTable)
+            .select(columns = Columns.list("id")) {
+                filter {
+                    or {
+                        eq("username", normalizedUsername)
+                        eq("email", normalizedEmail)
+                    }
+                }
+                limit(1)
+            }
+            .decodeSingleOrNull<JsonObject>() != null
+        if (alreadyExists) return null
+
+        val newId = Random.nextInt(0, 1_000_000).toString()
+        val newUserJson = buildJsonObject {
+            put("id", newId)
+            put("username", normalizedUsername)
+            put("email", normalizedEmail)
+            put("password", password)
+            put("bio", "")
+            put("preferences", buildJsonArray { })
+            put("food_restrictions", buildJsonArray { })
+            put("latitude", 0.0)
+            put("longitude", 0.0)
+            put("notifications_enabled", true)
+        }
+        client.from(usersTable).insert(newUserJson)
+        return newUserJson.toUser()
+    }
+
     private val restaurantsTable = "restaurants2"
 
     override suspend fun getHomeFeed(userName: String): HomeFeed {
@@ -142,6 +200,23 @@ class SupabaseRepository(
         fallback.updatePassword(newPassword)
     }
 
+    private fun JsonObject.toUser(): User? {
+        val id = getString("id")
+        if (id.isBlank()) return null
+
+        return User(
+            id = id,
+            username = getString("username"),
+            email = getString("email"),
+            password = getString("password"),
+            bio = getString("bio"),
+            preferences = getStringList("preferences"),
+            foodRestrictions = getStringList("food_restrictions"),
+            latitude = getDouble("latitude"),
+            longitude = getDouble("longitude"),
+        )
+    }
+
     private fun JsonObject.toDomain(savedIds: Set<String>): Restaurant? {
         val id = getString("id")
         if (id.isBlank()) return null
@@ -166,6 +241,11 @@ class SupabaseRepository(
 
     private fun JsonObject.getBoolean(key: String, fallback: Boolean = false): Boolean =
         this[key]?.jsonPrimitive?.booleanOrNull ?: fallback
+
+    private fun JsonObject.getStringList(key: String): List<String> =
+        (this[key] as? JsonArray)
+            ?.mapNotNull { element -> (element as? JsonPrimitive)?.contentOrNull }
+            ?: emptyList()
 
     private fun isDrinkCategory(category: String): Boolean {
         val key = category.lowercase()

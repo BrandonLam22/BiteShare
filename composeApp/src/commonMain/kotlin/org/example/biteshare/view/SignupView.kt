@@ -105,7 +105,6 @@ fun SignupView(viewModel: SignupViewModel,
                         color = Color.Gray
                     )
                 },
-                visualTransformation = PasswordVisualTransformation(), // hide the text
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
@@ -120,13 +119,22 @@ fun SignupView(viewModel: SignupViewModel,
             Spacer(modifier = Modifier.height(30.dp))
 
             LoginSignupButton(
-                text = "Sign Up",
+                text = if (viewModel.isLoading) "Creating account..." else "Sign Up",
                 onClick = {
-                    if (viewModel.onSignupClicked()) { // Call function in ViewModel
-                        onSignupSuccess()
+                    if (!viewModel.isLoading) { // Call function in ViewModel
+                        viewModel.onSignupClicked(onSignupSuccess)
                     }
                 }
             )
+
+            viewModel.errorMessage?.let { message ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = message,
+                    color = Color.Red,
+                    fontSize = 14.sp
+                )
+            }
 
         }
 

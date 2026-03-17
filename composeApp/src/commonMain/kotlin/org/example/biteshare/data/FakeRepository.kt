@@ -13,6 +13,7 @@ import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
+import org.example.biteshare.domain.User
 
 class FakeRepository(
     private val model: Model = Model(),
@@ -283,5 +284,14 @@ class FakeRepository(
 
     override suspend fun updatePassword(newPassword: String) {
         model.updateUserPassword(newPassword)
+    }
+
+    // Login/Signup
+    override suspend fun login(username: String, password: String): User? {
+        return if (model.login(username, password)) model.currentUser else null
+    }
+
+    override suspend fun signup(username: String, password: String, email: String): User? {
+        return if (model.signup(username, password, email)) model.currentUser else null
     }
 }
