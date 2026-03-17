@@ -25,7 +25,6 @@ import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.providers.builtin.Email
 import org.example.biteshare.domain.UserRow
 import org.jetbrains.compose.resources.getString
 import org.example.biteshare.domain.RestaurantLocation
@@ -41,6 +40,7 @@ class SupabaseRepository(
 
     private val usersTable = "users"
     private val reviewsTable = "reviews"
+    private val userSavedRestaurantsTable = "user_saved_restaurants"
 
     override suspend fun login(username: String, password: String): User? {
         val normalizedUsername = username.trim()
@@ -150,7 +150,7 @@ class SupabaseRepository(
 
     private suspend fun fetchUserRow(): UserRow? {
         cachedUserRow?.let { return it }
-        val userId = model.currentUser?.id ?: return null  // use model instead of client.auth
+        val userId = resolveCurrentUserId() ?: return null
         return try {
             val row = client.from("users")
                 .select { filter { eq("id", userId) } }
@@ -245,13 +245,43 @@ class SupabaseRepository(
     }
 
     override suspend fun getSavedRestaurants(): List<Restaurant> {
-        val savedIds = model.getSavedRestaurantIds()
+        val savedIds = fetchSavedRestaurantIds()
         if (savedIds.isEmpty()) return emptyList()
         return restaurants().filter { it.id in savedIds }
     }
 
     override suspend fun toggleSaved(restaurantId: String) {
-        model.toggleSavedRestaurant(restaurantId)
+        val userId = resolveCurrentUserId()
+        if (userId == null) {
+            fallback.toggleSaved(restaurantId)
+            return
+        }
+
+        val currentSavedIds = fetchSavedRestaurantIds(userId)
+        val shouldSave = restaurantId !in currentSavedIds
+
+        try {
+            if (shouldSave) {
+                client.postgrest[userSavedRestaurantsTable].upsert(
+                    body = JsonArray(listOf(buildSavedRestaurantPayload(userId, restaurantId)))
+                ) {
+                    onConflict = "user_id,restaurant_id"
+                }
+            } else {
+                client.postgrest[userSavedRestaurantsTable].delete {
+                    filter {
+                        eq("user_id", userId)
+                        eq("restaurant_id", restaurantId)
+                    }
+                }
+            }
+            syncSavedRestaurantsWithModel(
+                if (shouldSave) currentSavedIds + restaurantId else currentSavedIds - restaurantId
+            )
+        } catch (t: Throwable) {
+            println("toggleSaved error: ${t.message}")
+            fallback.toggleSaved(restaurantId)
+        }
     }
 
     override suspend fun getProfile(): ProfileData {
@@ -265,7 +295,7 @@ class SupabaseRepository(
     }
 
     override suspend fun updateNotificationPreference(enabled: Boolean) {
-        val userId = client.auth.currentUserOrNull()?.id
+        val userId = resolveCurrentUserId()
         if (userId == null) {
             fallback.updateNotificationPreference(enabled)
             return
@@ -303,16 +333,8 @@ class SupabaseRepository(
     }
 
     override suspend fun verifyCurrentPassword(password: String): Boolean {
-        return try {
-            val email = client.auth.currentUserOrNull()?.email ?: return false
-            client.auth.signInWith(Email) {
-                this.email = email
-                this.password = password
-            }
-            true
-        } catch (t: Throwable) {
-            false
-        }
+        val expectedPassword = getPassword()
+        return expectedPassword.isNotBlank() && password == expectedPassword
     }
 
     override suspend fun updateProfile(
@@ -322,20 +344,43 @@ class SupabaseRepository(
         preferences: List<String>,
         foodRestrictions: List<String>
     ) {
-        val userId = client.auth.currentUserOrNull()?.id
+        val userId = resolveCurrentUserId()
         if (userId == null) {
             fallback.updateProfile(username, email, bio, preferences, foodRestrictions)
             return
         }
+        val normalizedUsername = username.trim()
+        val normalizedEmail = email.trim().lowercase()
+        val existingRow = cachedUserRow ?: fetchUserRow()
         try {
             client.from("users").update({
-                set("username", username)
-                set("email", email)
+                set("username", normalizedUsername)
+                set("email", normalizedEmail)
                 set("bio", bio)
                 set("preferences", preferences)
                 set("food_restrictions", foodRestrictions)
             }) { filter { eq("id", userId) } }
-            cachedUserRow = null  // invalidate so next fetch gets fresh data
+            model.updateUserProfile(
+                username = normalizedUsername,
+                email = normalizedEmail,
+                bio = bio,
+                preferences = preferences,
+                foodRestrictions = foodRestrictions
+            )
+            cachedUserRow = existingRow?.copy(
+                username = normalizedUsername,
+                email = normalizedEmail,
+                bio = bio,
+                preferences = preferences,
+                foodRestrictions = foodRestrictions
+            ) ?: UserRow(
+                id = userId,
+                username = normalizedUsername,
+                email = normalizedEmail,
+                bio = bio,
+                preferences = preferences,
+                foodRestrictions = foodRestrictions
+            )
         } catch (t: Throwable) {
             println("updateProfile error: ${t.message}")
             fallback.updateProfile(username, email, bio, preferences, foodRestrictions)
@@ -348,7 +393,7 @@ class SupabaseRepository(
         restaurants().map { it.location }.distinct().sorted()
 
     override suspend fun restaurants(): List<Restaurant> {
-        val savedIds = model.getSavedRestaurantIds()
+        val savedIds = fetchSavedRestaurantIds()
         return try {
             val raw = client.postgrest[restaurantsTable]
                 .select(Columns.raw("*"))
@@ -375,16 +420,90 @@ class SupabaseRepository(
     }
 
 
-    override suspend fun getPassword(): String = ""
+    override suspend fun getPassword(): String {
+        model.currentUser?.password?.takeIf { it.isNotBlank() }?.let { return it }
+
+        val userId = resolveCurrentUserId() ?: return ""
+        return try {
+            client.from(usersTable)
+                .select(Columns.list("password")) {
+                    filter { eq("id", userId) }
+                    limit(1)
+                }
+                .decodeSingleOrNull<JsonObject>()
+                ?.getString("password")
+                .orEmpty()
+        } catch (t: Throwable) {
+            println("getPassword error: ${t.message}")
+            ""
+        }
+    }
 
     override suspend fun updatePassword(newPassword: String) {
+        val userId = resolveCurrentUserId()
+        if (userId == null) {
+            fallback.updatePassword(newPassword)
+            return
+        }
         try {
-            client.auth.updateUser { password = newPassword }
+            client.from(usersTable).update({
+                set("password", newPassword)
+            }) { filter { eq("id", userId) } }
+            model.updateUserPassword(newPassword)
+            runCatching {
+                client.auth.updateUser { password = newPassword }
+            }.onFailure { throwable ->
+                println("updatePassword auth sync warning: ${throwable.message}")
+            }
         } catch (t: Throwable) {
             println("updatePassword error: ${t.message}")
             fallback.updatePassword(newPassword)
         }
     }
+
+    private fun resolveCurrentUserId(): String? {
+        val modelUserId = model.currentUser?.id?.trim().orEmpty()
+        if (modelUserId.isNotBlank()) {
+            return modelUserId
+        }
+        return client.auth.currentUserOrNull()?.id?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    private suspend fun fetchSavedRestaurantIds(): Set<String> {
+        val userId = resolveCurrentUserId() ?: return model.getSavedRestaurantIds()
+        return fetchSavedRestaurantIds(userId)
+    }
+
+    private suspend fun fetchSavedRestaurantIds(userId: String): Set<String> {
+        if (userId.isBlank()) return emptySet()
+        return try {
+            val raw = client.postgrest[userSavedRestaurantsTable]
+                .select(Columns.raw("restaurant_id")) {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row ->
+                row.getString("restaurant_id").takeIf { it.isNotBlank() }
+            }.toSet().also { savedIds ->
+                syncSavedRestaurantsWithModel(savedIds)
+            }
+        } catch (t: Throwable) {
+            println("fetchSavedRestaurantIds error: ${t.message}")
+            model.getSavedRestaurantIds()
+        }
+    }
+
+    private fun syncSavedRestaurantsWithModel(savedIds: Set<String>) {
+        if (model.currentUser != null) {
+            model.updateSavedRestaurants(savedIds.toList())
+        }
+    }
+
+    private fun buildSavedRestaurantPayload(userId: String, restaurantId: String): JsonObject =
+        buildJsonObject {
+            put("user_id", userId)
+            put("restaurant_id", restaurantId)
+        }
 
     private fun JsonObject.toUser(): User? {
         val id = getString("id")
