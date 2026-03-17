@@ -1,16 +1,22 @@
 package org.example.biteshare.presentation
 
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.example.biteshare.data.FakeRepository
+import org.example.biteshare.runMainTest
 import org.example.biteshare.viewmodel.HomeViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
 
     @Test
-    fun initLoadsHomepageContent() {
-        val vm = HomeViewModel(FakeRepository())
+    fun initLoadsHomepageContent() = runMainTest {
+        val repo = FakeRepository()
+        val vm = HomeViewModel(repo, repo)
+        advanceUntilIdle()
 
         assertTrue(vm.uiState.categories.isNotEmpty())
         assertTrue(vm.uiState.popularDishes.isNotEmpty())
@@ -20,17 +26,21 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun loadHomeUsesProvidedUserNameInGreeting() {
-        val vm = HomeViewModel(FakeRepository())
+    fun loadHomeUsesProvidedUserNameInGreeting() = runMainTest {
+        val repo = FakeRepository()
+        val vm = HomeViewModel(repo, repo)
 
         vm.loadHome("Kevin")
+        advanceUntilIdle()
 
         assertEquals("Hi, Kevin", vm.uiState.greeting)
     }
 
     @Test
-    fun homepageTypesAreDeliveryStyleCategories() {
-        val vm = HomeViewModel(FakeRepository())
+    fun homepageTypesAreDeliveryStyleCategories() = runMainTest {
+        val repo = FakeRepository()
+        val vm = HomeViewModel(repo, repo)
+        advanceUntilIdle()
         val labels = vm.uiState.categories.map { it.label }
 
         assertTrue(labels.contains("Fast Food"))
@@ -39,9 +49,10 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun categoryClickCanMapToRestaurantListThroughRepository() {
+    fun categoryClickCanMapToRestaurantListThroughRepository() = runMainTest {
         val repo = FakeRepository()
-        val vm = HomeViewModel(repo)
+        val vm = HomeViewModel(repo, repo)
+        advanceUntilIdle()
         val firstCategory = vm.uiState.categories.first().label
 
         val matched = repo.getRestaurantsByTag(firstCategory)

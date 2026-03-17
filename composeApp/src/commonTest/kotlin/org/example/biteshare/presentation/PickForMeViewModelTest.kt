@@ -1,20 +1,28 @@
 package org.example.biteshare.presentation
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
 import org.example.biteshare.domain.PickMode
+import org.example.biteshare.runMainTest
 import org.example.biteshare.viewmodel.PickForMeViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PickForMeViewModelTest {
 
     @Test
-    fun initLoadsFriendsLocationsAndPreview() {
+    fun initLoadsFriendsLocationsAndPreview() = runMainTest {
         val vm = PickForMeViewModel(FakeRepository())
+        advanceUntilIdle()
+        advanceTimeBy(300)
+        advanceUntilIdle()
 
         assertTrue(vm.uiState.friends.isNotEmpty())
         assertTrue(vm.uiState.locations.contains("Any"))
@@ -22,7 +30,7 @@ class PickForMeViewModelTest {
     }
 
     @Test
-    fun setModeResetsSelectedFriends() {
+    fun setModeResetsSelectedFriends() = runMainTest {
         val vm = PickForMeViewModel(FakeRepository())
         vm.setMode(PickMode.WITH_FRIENDS)
         vm.toggleFriend("alex")
@@ -34,7 +42,7 @@ class PickForMeViewModelTest {
     }
 
     @Test
-    fun filterChangesAreIncludedInPickContext() {
+    fun filterChangesAreIncludedInPickContext() = runMainTest {
         val vm = PickForMeViewModel(FakeRepository())
 
         vm.setLocation("Addis Ababa")
@@ -52,7 +60,7 @@ class PickForMeViewModelTest {
     }
 
     @Test
-    fun toggleFriendAddsAndRemovesFriendId() {
+    fun toggleFriendAddsAndRemovesFriendId() = runMainTest {
         val vm = PickForMeViewModel(FakeRepository())
 
         vm.toggleFriend("sally")

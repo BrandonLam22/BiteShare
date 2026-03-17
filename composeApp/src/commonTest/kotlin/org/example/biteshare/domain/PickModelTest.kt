@@ -1,6 +1,7 @@
 package org.example.biteshare.domain
 
 import org.example.biteshare.data.PickMockDB
+import org.example.biteshare.runMainTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -8,7 +9,7 @@ import kotlin.test.assertTrue
 class PickModelTest {
 
     @Test
-    fun recommendRespectsLocationFilter() {
+    fun recommendRespectsLocationFilter() = runMainTest {
         val repo = PickMockDB()
         val model = PickModel(repo)
 
@@ -23,7 +24,7 @@ class PickModelTest {
     }
 
     @Test
-    fun recommendFiltersOutRestrictedItems() {
+    fun recommendFiltersOutRestrictedItems() = runMainTest {
         val repo = PickMockDB(restrictions = listOf("coffee"))
         val model = PickModel(repo)
 
@@ -35,7 +36,7 @@ class PickModelTest {
     }
 
     @Test
-    fun preferencesInfluenceRanking() {
+    fun preferencesInfluenceRanking() = runMainTest {
         val repo = PickMockDB(preferences = listOf("pizza"))
         val model = PickModel(repo)
 
@@ -47,7 +48,7 @@ class PickModelTest {
     }
 
     @Test
-    fun previewCountMatchesRecommendationSize() {
+    fun previewCountMatchesRecommendationSize() = runMainTest {
         val repo = PickMockDB(preferences = listOf("sushi"))
         val model = PickModel(repo)
 
@@ -59,7 +60,7 @@ class PickModelTest {
     }
 
     @Test
-    fun groupPreferencesAreMergedForRecommendations() {
+    fun groupPreferencesAreMergedForRecommendations() = runMainTest {
         val restaurants = listOf(
             Restaurant("p1", "Pizza Place", "Pizza", "$10.00", "10 min", 4.0, location = "Waterloo"),
             Restaurant("s1", "Sushi Spot", "Sushi", "$10.00", "10 min", 5.0, location = "Waterloo"),
@@ -86,7 +87,7 @@ class PickModelTest {
     }
 
     @Test
-    fun voteSessionVotesAreUpdated() {
+    fun voteSessionVotesAreUpdated() = runMainTest {
         val restaurants = listOf(
             Restaurant("r1", "Cafe One", "Coffee", "$5.00", "8 min", 4.2),
             Restaurant("r2", "Burger Two", "Burgers", "$9.00", "12 min", 4.1),
@@ -114,7 +115,7 @@ class PickModelTest {
     }
 
     @Test
-    fun closeVoteSessionPersistsClosedState() {
+    fun closeVoteSessionPersistsClosedState() = runMainTest {
         val restaurants = listOf(
             Restaurant("r1", "Cafe One", "Coffee", "$5.00", "8 min", 4.2),
         )

@@ -27,3 +27,5 @@ We are a four-person team.
 
 - [Project Proposal](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group-7-Project-Proposal)  
   Describes our product vision.
+
+- [Database Schema UML](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Database-Schema-UML)

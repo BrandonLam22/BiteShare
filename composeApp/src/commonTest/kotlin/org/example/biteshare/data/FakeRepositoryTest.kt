@@ -2,6 +2,7 @@ package org.example.biteshare.data
 
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.FriendAddResult
+import org.example.biteshare.runMainTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,7 +21,7 @@ class FakeRepositoryTest {
 
 
     @Test
-    fun allRestaurantsShouldHaveDetailData() {
+    fun allRestaurantsShouldHaveDetailData() = runMainTest {
         val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
         assertTrue(all.isNotEmpty(), "Restaurant list should not be empty.")
 
@@ -32,7 +33,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun homeFeedShouldContainBaselineSections() {
+    fun homeFeedShouldContainBaselineSections() = runMainTest {
         val feed = repo.getHomeFeed("Tester")
         assertTrue(feed.categories.isNotEmpty(), "Home categories should not be empty.")
         assertTrue(feed.popularDishes.isNotEmpty(), "Popular dishes should not be empty.")
@@ -41,7 +42,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun waterlooRestaurantsShouldBeRichEnoughForDemo() {
+    fun waterlooRestaurantsShouldBeRichEnoughForDemo() = runMainTest {
         val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
         assertTrue(all.size >= 12, "Expected at least 12 restaurants for demo richness.")
 
@@ -52,7 +53,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun featuredItemsShouldBeCategorySpecificNotGeneric() {
+    fun featuredItemsShouldBeCategorySpecificNotGeneric() = runMainTest {
         val pizzaDetail = repo.getRestaurantDetailById("p1")
         val sushiDetail = repo.getRestaurantDetailById("s1")
 
@@ -71,7 +72,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun attributesShouldBeCategorySpecific() {
+    fun attributesShouldBeCategorySpecific() = runMainTest {
         val coffeeDetail = repo.getRestaurantDetailById("c1")
         val grillDetail = repo.getRestaurantDetailById("uw9")
 
@@ -87,7 +88,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun homeFeedCategoriesShouldUseDeliveryStyleTypes() {
+    fun homeFeedCategoriesShouldUseDeliveryStyleTypes() = runMainTest {
         val feed = repo.getHomeFeed("TagUser")
         assertTrue(feed.categories.size >= 6, "Homepage should expose multiple tag-based category types.")
         val labels = feed.categories.map { it.label.lowercase() }
@@ -97,7 +98,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun getRestaurantsByTagShouldReturnRelevantList() {
+    fun getRestaurantsByTagShouldReturnRelevantList() = runMainTest {
         val halal = repo.getRestaurantsByTag("Halal")
         val sushi = repo.getRestaurantsByTag("Sushi")
 
@@ -108,7 +109,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun tagSynonymsShouldMapDrinkAndBubbleTea() {
+    fun tagSynonymsShouldMapDrinkAndBubbleTea() = runMainTest {
         val byDrink = repo.getRestaurantsByTag("Drink")
         val byBubbleTea = repo.getRestaurantsByTag("Bubble Tea")
 
@@ -119,7 +120,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun friendsReturnsMockDbData() {
+    fun friendsReturnsMockDbData() = runMainTest {
         val repo = FakeRepository()
 
         val friends = repo.friends()
@@ -129,7 +130,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun getRestaurantByIdCanReadBrowseData() {
+    fun getRestaurantByIdCanReadBrowseData() = runMainTest {
         val repo = FakeRepository()
 
         val restaurant = repo.getRestaurantById("bp2")
@@ -139,7 +140,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun locationsReturnsDistinctSortedValues() {
+    fun locationsReturnsDistinctSortedValues() = runMainTest {
         val repo = FakeRepository()
 
         val locations = repo.locations()
@@ -150,7 +151,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun searchRestaurantsShouldFindSpecificRestaurantByName() {
+    fun searchRestaurantsShouldFindSpecificRestaurantByName() = runMainTest {
         val result = repo.searchRestaurants("Ken Sushi")
 
         assertTrue(result.isNotEmpty())
@@ -158,7 +159,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun searchRestaurantsShouldMatchAttributesAndDescriptions() {
+    fun searchRestaurantsShouldMatchAttributesAndDescriptions() = runMainTest {
         val result = repo.searchRestaurants("halal")
 
         assertTrue(result.isNotEmpty())
@@ -166,7 +167,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun searchUsersShouldReturnOnlyEligibleUsers() {
+    fun searchUsersShouldReturnOnlyEligibleUsers() = runMainTest {
         val repo = loggedInRepo()
 
         val results = repo.searchUsers("ali")
@@ -177,7 +178,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun addFriendShouldAppendNewFriendToCurrentUser() {
+    fun addFriendShouldAppendNewFriendToCurrentUser() = runMainTest {
         val repo = loggedInRepo()
 
         val result = repo.addFriend("user_03")
@@ -187,7 +188,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun addFriendShouldRejectDuplicateFriend() {
+    fun addFriendShouldRejectDuplicateFriend() = runMainTest {
         val repo = loggedInRepo()
 
         assertEquals(FriendAddResult.SUCCESS, repo.addFriend("user_03"))
@@ -197,7 +198,7 @@ class FakeRepositoryTest {
     // ── Profile & User Management ──────────────────────────────────────────────
 
     @Test
-    fun getProfileShouldReturnUserData() {
+    fun getProfileShouldReturnUserData() = runMainTest {
         val profile = repo.getProfile()
         assertNotNull(profile)
         assertTrue(profile.name.isNotBlank(), "Profile name should not be blank.")
@@ -205,7 +206,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun getEditableProfileShouldMatchGetProfile() {
+    fun getEditableProfileShouldMatchGetProfile() = runMainTest {
         val profile = repo.getProfile()
         val editable = repo.getEditableProfile()
         assertEquals(profile.name, editable.username, "Username should match between profile and editable profile.")
@@ -213,7 +214,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun updateProfileShouldPersistChanges() {
+    fun updateProfileShouldPersistChanges() = runMainTest {
         val repo = loggedInRepo()
 
         repo.updateProfile(
@@ -233,7 +234,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun updateNotificationPreferenceShouldToggleCorrectly() {
+    fun updateNotificationPreferenceShouldToggleCorrectly() = runMainTest {
         repo.updateNotificationPreference(false)
         assertFalse(repo.getProfile().notificationsEnabled, "Notifications should be disabled.")
 
@@ -244,7 +245,7 @@ class FakeRepositoryTest {
 // ── Saved Restaurants ──────────────────────────────────────────────────────
 
     @Test
-    fun toggleSavedShouldAddRestaurantToSavedList() {
+    fun toggleSavedShouldAddRestaurantToSavedList() = runMainTest {
         val repo = loggedInRepo()
         // Kevin already has ["p1", "b1", "bp1"] saved — pick one that isn't saved
         val unsavedId = "s1"
@@ -256,7 +257,7 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun toggleSavedTwiceShouldRemoveRestaurantFromSavedList() {
+    fun toggleSavedTwiceShouldRemoveRestaurantFromSavedList() = runMainTest {
         val repo = loggedInRepo()
         val unsavedId = "s1"
 
@@ -267,13 +268,13 @@ class FakeRepositoryTest {
     }
 
     @Test
-    fun getSavedRestaurantsShouldReturnNonEmptyList() {
+    fun getSavedRestaurantsShouldReturnNonEmptyList() = runMainTest {
         val saved = repo.getSavedRestaurants()
         assertTrue(saved.isNotEmpty(), "Saved restaurants should not be empty (defaults from MockDB expected).")
     }
 
     @Test
-    fun getSavedRestaurantsShouldOnlyContainSavedEntries() {
+    fun getSavedRestaurantsShouldOnlyContainSavedEntries() = runMainTest {
         val saved = repo.getSavedRestaurants()
         val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
         saved.forEach { savedRestaurant ->
@@ -289,21 +290,21 @@ class FakeRepositoryTest {
 // ── getRestaurantsByTag edge cases ─────────────────────────────────────────
 
     @Test
-    fun getRestaurantsByTagWithBlankTagShouldReturnAllRestaurants() {
+    fun getRestaurantsByTagWithBlankTagShouldReturnAllRestaurants() = runMainTest {
         val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
         val result = repo.getRestaurantsByTag("")
         assertEquals(all.size, result.size, "Blank tag should return all restaurants.")
     }
 
     @Test
-    fun getRestaurantsByTagWithUnknownTagShouldReturnAllRestaurants() {
+    fun getRestaurantsByTagWithUnknownTagShouldReturnAllRestaurants() = runMainTest {
         val all = (repo.restaurants() + repo.browseRestaurants()).distinctBy { it.id }
         val result = repo.getRestaurantsByTag("xyzunknowntag")
         assertEquals(all.size, result.size, "Unknown tag should return all restaurants.")
     }
 
     @Test
-    fun getRestaurantsByTagShouldBeCaseInsensitive() {
+    fun getRestaurantsByTagShouldBeCaseInsensitive() = runMainTest {
         val lower = repo.getRestaurantsByTag("pizza")
         val upper = repo.getRestaurantsByTag("PIZZA")
         val mixed = repo.getRestaurantsByTag("PiZzA")
@@ -314,9 +315,9 @@ class FakeRepositoryTest {
 // ── getHomeFeed edge cases ─────────────────────────────────────────────────
 
     @Test
-    fun getHomeFeedShouldDefaultToJohnWhenNoNameGiven() {
-        val feed = repo.getHomeFeed()
-        assertTrue(feed.greeting.contains("John"), "Default greeting should use 'John'.")
+    fun getHomeFeedUsesProvidedName() = runMainTest {
+        val feed = repo.getHomeFeed("John")
+        assertTrue(feed.greeting.contains("John"), "Greeting should include provided name.")
     }
 
 
@@ -324,7 +325,7 @@ class FakeRepositoryTest {
 // ── getRestaurantDetailById edge cases ────────────────────────────────────
 
     @Test
-    fun getRestaurantDetailByIdShouldReturnNullForNonExistentId() {
+    fun getRestaurantDetailByIdShouldReturnNullForNonExistentId() = runMainTest {
         val detail = repo.getRestaurantDetailById("nonexistent_id_xyz")
         assertEquals(null, detail, "Non-existent ID should return null.")
     }
@@ -338,7 +339,7 @@ class FakeRepositoryTest {
 // ── locations ─────────────────────────────────────────────────────────────
 
     @Test
-    fun locationsShouldAllCorrespondToRealRestaurants() {
+    fun locationsShouldAllCorrespondToRealRestaurants() = runMainTest {
         val locations = repo.locations()
         val allRestaurantLocations = (repo.restaurants() + repo.browseRestaurants())
             .map { it.location }
