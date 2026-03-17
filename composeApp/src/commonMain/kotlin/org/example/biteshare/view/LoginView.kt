@@ -110,13 +110,22 @@ fun LoginView(viewModel: LoginViewModel,
             Spacer(modifier = Modifier.height(20.dp))
 
             LoginSignupButton(
-                text = "Login",
+                text = if (viewModel.isLoading) "Logging in..." else "Login",
                 onClick = {
-                    if (viewModel.onLoginClicked()) { // View calls function in ViewModel
-                        onLoginSuccess()
+                    if (!viewModel.isLoading) { // View calls function in ViewModel
+                        viewModel.onLoginClicked(onLoginSuccess)
                     }
                 }
             )
+
+            viewModel.errorMessage?.let { message ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = message,
+                    color = Color.Red,
+                    fontSize = 14.sp
+                )
+            }
 
             Spacer(modifier = Modifier.height(25.dp))
         }
