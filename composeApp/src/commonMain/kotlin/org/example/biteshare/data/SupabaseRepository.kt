@@ -45,7 +45,7 @@ class SupabaseRepository(
     override suspend fun login(username: String, password: String): User? {
         val normalizedUsername = username.trim()
 
-        return client.from(usersTable)
+        val user = client.from(usersTable)
             .select(Columns.raw("*")) {
                 filter {
                     eq("username", normalizedUsername)
@@ -55,6 +55,13 @@ class SupabaseRepository(
             }
             .decodeSingleOrNull<JsonObject>()
             ?.toUser()
+
+
+        if (user != null) {
+            model.applyAuthenticatedUser(user)
+        }
+
+        return user
     }
 
     override suspend fun signup(username: String, password: String, email: String): User? {
@@ -86,8 +93,12 @@ class SupabaseRepository(
             put("longitude", 0.0)
             put("notifications_enabled", true)
         }
-        client.from(usersTable).insert(newUserJson)
-        return newUserJson.toUser()
+        //client.from(usersTable).insert(newUserJson)
+        //return newUserJson.toUser()
+        val newUser = newUserJson.toUser() ?: return null
+        model.applyAuthenticatedUser(newUser)  // ADD THIS
+        return newUser
+
     }
 
     private val restaurantsTable = "restaurants2"
@@ -139,7 +150,7 @@ class SupabaseRepository(
 
     private suspend fun fetchUserRow(): UserRow? {
         cachedUserRow?.let { return it }
-        val userId = client.auth.currentUserOrNull()?.id ?: return null
+        val userId = model.currentUser?.id ?: return null  // use model instead of client.auth
         return try {
             val row = client.from("users")
                 .select { filter { eq("id", userId) } }
