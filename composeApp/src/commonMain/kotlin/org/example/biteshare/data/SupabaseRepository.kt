@@ -16,6 +16,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.example.biteshare.domain.CategoryItem
 import org.example.biteshare.domain.EditableProfile
+import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.Model
@@ -23,6 +24,7 @@ import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
 import kotlin.random.Random
@@ -142,8 +144,9 @@ class SupabaseRepository(
 
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
         val summary = getRestaurantById(id) ?: return null
-        val baseDetail = fallback.getRestaurantDetailById(id) ?: return null
+        val fallbackDetail = fallback.getRestaurantDetailById(id)
         val reviews = getReviewsForRestaurant(summary.name)
+        val baseDetail = fallbackDetail ?: buildRestaurantDetail(summary)
         val mergedReviews = (reviews + baseDetail.reviews)
             .distinctBy { it.id }
         val averageRating = mergedReviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: baseDetail.rating
@@ -300,6 +303,43 @@ class SupabaseRepository(
             tags = getStringList("tags"),
             content = getString("content"),
             rating = getInt("rating", 5),
+        )
+    }
+
+    private fun buildRestaurantDetail(summary: Restaurant): RestaurantDetail {
+        val query = summary.name.replace(" ", "+")
+        val imageKey = when (summary.category.lowercase()) {
+            "pizza" -> "pizza_home"
+            "sushi" -> "beyayenet_home"
+            "burgers", "fast food" -> "chesse_burger_home"
+            "coffee", "cafe", "drink" -> "coffee_home"
+            "italian" -> "local_home"
+            else -> "coffee_home"
+        }
+
+        return RestaurantDetail(
+            restaurantId = summary.id,
+            name = summary.name,
+            images = listOf(imageKey, "drink_home"),
+            featuredItems = listOf(
+                FeaturedItem(
+                    name = "Chef Recommendation",
+                    price = summary.price,
+                    description = "Popular choice from this restaurant"
+                )
+            ),
+            location = RestaurantLocation(
+                city = summary.location,
+                address = "${summary.name}, ${summary.location}",
+                distance = summary.eta
+            ),
+            reviews = emptyList(),
+            description = "${summary.name} is known for ${summary.category.lowercase()} and consistent service.",
+            rating = summary.rating,
+            attributes = listOf(summary.category, "Popular"),
+            googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$query+${summary.location.replace(" ", "+")}",
+            restaurantWebsite = "https://example.com/${summary.id}",
+            priceRange = summary.price,
         )
     }
 

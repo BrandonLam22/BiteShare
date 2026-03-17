@@ -121,7 +121,8 @@ class FakeRepository(
     }
 
     override suspend fun getReviewsForRestaurant(restaurantName: String): List<Review> =
-        model.getReviewsForRestaurant(restaurantName)
+        (model.getReviewsForRestaurant(restaurantName) + MockDB.reviewsForRestaurant(restaurantName))
+            .distinctBy { it.id }
 
     override suspend fun submitReview(review: Review) {
         model.addReview(review)
