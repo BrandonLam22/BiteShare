@@ -63,6 +63,7 @@ class FakeRepository(
                     .thenBy { it.name.lowercase() }
                     .thenBy { it.id.lowercase() }
             )
+            .toList()
     }
 
     override suspend fun addFriend(friendId: String): FriendAddResult {
