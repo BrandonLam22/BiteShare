@@ -3,7 +3,9 @@ package org.example.biteshare.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.biteshare.data.PickRepository
 import org.example.biteshare.domain.BudgetFilter
@@ -32,6 +34,7 @@ class PickForMeViewModel(
         private set
 
     private val scope = MainScope()
+    private var previewJob: Job? = null
 
     init {
         loadLookups()
@@ -88,7 +91,9 @@ class PickForMeViewModel(
 
     private fun refreshPreview() {
         val context = buildPickContext()
-        scope.launch {
+        previewJob?.cancel()
+        previewJob = scope.launch {
+            delay(PREVIEW_DEBOUNCE_MS)
             val count = model.previewCount(context)
             uiState = uiState.copy(resultPreviewCount = count)
         }
@@ -103,6 +108,8 @@ class PickForMeViewModel(
         }
     }
 }
+
+private const val PREVIEW_DEBOUNCE_MS = 250L
 
 
 // Picking Logic

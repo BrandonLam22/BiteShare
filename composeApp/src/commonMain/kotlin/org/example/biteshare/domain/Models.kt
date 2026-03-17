@@ -84,9 +84,9 @@ class PickModel(
     suspend fun recommend(context: PickContext): List<Restaurant> {
         val restaurants = repo.restaurants()
         val filtered = applyFilters(restaurants, context.filters)
-        val restrictions = repo.userRestrictions()
+        val restrictions = mergedRestrictions(context)
         val withoutRestrictedItems = applyUserRestrictions(filtered, restrictions)
-        val preferences = repo.userPreferences()
+        val preferences = mergedPreferences(context)
         return rankForMode(
             restaurants = withoutRestrictedItems,
             mode = context.mode,
@@ -104,6 +104,77 @@ class PickModel(
 
     suspend fun setRestaurantSelection(userId: String, restaurantId: String, selected: Boolean) {
         repo.setRestaurantSelection(userId, restaurantId, selected)
+    }
+
+    suspend fun allRestaurants(): List<Restaurant> = repo.restaurants()
+
+    suspend fun createVoteSession(session: VoteSession) {
+        repo.createVoteSession(session)
+    }
+
+    suspend fun updateVoteSessionVotes(sessionId: String, userId: String, votes: Set<String>) {
+        repo.updateVoteSessionVotes(sessionId, userId, votes)
+    }
+
+    suspend fun voteSessionVotes(sessionId: String): Map<String, Set<String>> =
+        repo.voteSessionVotes(sessionId)
+
+    suspend fun closeVoteSession(sessionId: String, closedAtEpoch: Long) {
+        repo.closeVoteSession(sessionId, closedAtEpoch)
+    }
+
+    suspend fun voteSessionsForCurrentUser(): List<VoteSession> {
+        val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return emptyList()
+        return repo.voteSessionsForUser(userId).map { session ->
+            val participants = session.participants.map { participant ->
+                if (participant.id == userId) {
+                    participant.copy(name = "You", isSelf = true)
+                } else {
+                    participant.copy(isSelf = false)
+                }
+            }
+            session.copy(participants = participants)
+        }
+    }
+
+    suspend fun voteSessionById(sessionId: String): VoteSession? {
+        val userId = currentUserId()?.takeIf { it.isNotBlank() }
+        val session = repo.voteSessionById(sessionId) ?: return null
+        if (userId == null) return session
+        val participants = session.participants.map { participant ->
+            if (participant.id == userId) {
+                participant.copy(name = "You", isSelf = true)
+            } else {
+                participant.copy(isSelf = false)
+            }
+        }
+        return session.copy(participants = participants)
+    }
+
+    private suspend fun mergedPreferences(context: PickContext): List<String> {
+        val base = repo.userPreferences()
+        if (context.mode != PickMode.WITH_FRIENDS) return base
+        val userIds = buildSet {
+            repo.currentUserId()?.takeIf { it.isNotBlank() }?.let { add(it) }
+            addAll(context.selectedFriendIds.filter { it.isNotBlank() })
+        }
+        if (userIds.isEmpty()) return base
+        val byUser = repo.userPreferencesByUserIds(userIds)
+        if (byUser.isEmpty()) return base
+        return (byUser.values.flatten() + base).distinct()
+    }
+
+    private suspend fun mergedRestrictions(context: PickContext): List<String> {
+        val base = repo.userRestrictions()
+        if (context.mode != PickMode.WITH_FRIENDS) return base
+        val userIds = buildSet {
+            repo.currentUserId()?.takeIf { it.isNotBlank() }?.let { add(it) }
+            addAll(context.selectedFriendIds.filter { it.isNotBlank() })
+        }
+        if (userIds.isEmpty()) return base
+        val byUser = repo.userRestrictionsByUserIds(userIds)
+        if (byUser.isEmpty()) return base
+        return (byUser.values.flatten() + base).distinct()
     }
 
     private fun applyFilters(
@@ -251,7 +322,7 @@ class PickModel(
         val stopWords = setOf(
             "and", "the", "with", "for", "food", "only", "prefer", "preference",
             "allergy", "allergic", "avoid", "without", "from", "that", "this",
-            "mine", "my", "eat", "eating", "to"
+            "mine", "my", "eat", "eating", "to", "totally"
         )
 
         val keywords = mutableSetOf<String>()
@@ -284,17 +355,31 @@ class PickModel(
                     setOf("sushi", "seafood", "fish", "shrimp", "japanese")
                 "coffee", "cafe", "tea", "caffeine", "bubble tea", "boba" ->
                     setOf("coffee", "cafe", "tea", "bubble tea", "milk tea", "boba")
-                "pizza" -> setOf("pizza", "slice")
                 "burger", "burgers", "fast food", "fries" ->
                     setOf("burger", "burgers", "fast food", "fries", "poutine")
                 "halal", "shawarma", "middle eastern", "kabob" ->
                     setOf("halal", "shawarma", "middle eastern", "kabob", "kofta")
-                "vegetarian", "vegan", "meat", "beef", "chicken", "pork" ->
-                    setOf("meat", "beef", "chicken", "pork", "burger", "shawarma", "kabob", "grill")
+                "totally vegan" ->
+                    setOf(
+                        "vegan", "vegetarian",
+                        "meat", "beef", "chicken", "pork", "lamb", "steak", "bacon", "ham", "sausage",
+                        "milk", "cheese", "cream", "butter", "yogurt", "egg", "mayo", "honey"
+                    )
+                "vegetarian", "vegan" ->
+                    setOf(
+                        "vegetarian",
+                        "meat", "beef", "chicken", "pork", "lamb", "steak", "bacon", "ham", "sausage"
+                    )
+                "meat" ->
+                    setOf("meat", "beef", "chicken", "pork", "lamb", "steak", "bacon", "ham", "sausage")
+                "beef" -> setOf("beef", "steak", "brisket", "roast", "rib")
+                "chicken" -> setOf("chicken")
+                "pork" -> setOf("pork", "bacon", "ham", "sausage", "prosciutto", "pepperoni")
+                "lamb" -> setOf("lamb")
                 "gluten", "wheat" ->
                     setOf("bread", "noodle", "pizza", "wrap", "pasta")
                 "dairy", "lactose", "milk", "cheese" ->
-                    setOf("milk", "cheese", "cream", "latte", "mocha")
+                    setOf("milk", "cheese", "cream", "latte", "mocha", "butter", "yogurt")
                 else -> setOf(keyword)
             }
         }
@@ -305,10 +390,6 @@ class PickModel(
                 setOf("coffee", "cafe", "tea", "bubble tea", "milk tea", "boba")
             "burger", "burgers", "fast food" ->
                 setOf("burger", "burgers", "fast food", "fries")
-            "halal", "shawarma", "middle eastern", "kabob" ->
-                setOf("halal", "shawarma", "middle eastern", "kabob")
-            "indian", "curry", "paneer" ->
-                setOf("indian", "curry", "paneer")
             else -> setOf(keyword)
         }
     }

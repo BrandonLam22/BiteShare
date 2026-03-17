@@ -36,6 +36,8 @@ import org.example.biteshare.view.ProfileView
 import org.example.biteshare.view.RecommendsView
 import org.example.biteshare.view.ReviewView
 import org.example.biteshare.view.SavedView
+import org.example.biteshare.view.VoteHistoryDetailView
+import org.example.biteshare.view.VoteHistoryView
 import org.example.biteshare.view.VoteWithFriendsView
 import org.example.biteshare.viewmodel.BrowseViewModel
 import org.example.biteshare.viewmodel.ChangePasswordViewModel
@@ -50,6 +52,8 @@ import org.example.biteshare.viewmodel.ProfileViewModel
 import org.example.biteshare.viewmodel.RecommendsViewModel
 import org.example.biteshare.viewmodel.ReviewViewModel
 import org.example.biteshare.viewmodel.SavedViewModel
+import org.example.biteshare.viewmodel.VoteHistoryDetailViewModel
+import org.example.biteshare.viewmodel.VoteHistoryViewModel
 import org.example.biteshare.viewmodel.VoteWithFriendsViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
@@ -65,6 +69,8 @@ private sealed class PickRoute {
     data class GroupRecommend(val ctx: PickContext) : PickRoute()
     data class Vote(val ctx: PickContext) : PickRoute()
     data class SoloRecommend(val ctx: PickContext) : PickRoute()
+    data object History : PickRoute()
+    data class HistoryDetail(val sessionId: String) : PickRoute()
 }
 
 private sealed class ProfileRoute {
@@ -82,11 +88,7 @@ private sealed class ProfileRoute {
 fun AppRoot(model: Model) {
     val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
     val pickRepo: PickRepository = remember(model) {
-        PickDbRepository(
-            userIdProvider = { model.currentUser?.id },
-            userEmailProvider = { model.currentUser?.email },
-            userNameProvider = { model.currentUser?.username }
-        )
+        PickDbRepository(userIdProvider = { model.currentUser?.id })
     }
     val pickModel = remember(pickRepo) { PickModel(pickRepo) }
     val scope = rememberCoroutineScope()
@@ -100,6 +102,7 @@ fun AppRoot(model: Model) {
     val browseVm = remember(repo) { BrowseViewModel(repo) }
     val pickVm = remember(pickModel) { PickForMeViewModel(pickModel) }
     val recVm = remember(pickModel) { RecommendsViewModel(pickModel) }
+    val historyVm = remember(pickModel) { VoteHistoryViewModel(pickModel) }
     val profileVm = remember(repo) { ProfileViewModel(repo) }
     val savedVm = remember(repo) { SavedViewModel(repo) }
     val privacyVm = remember(repo) { PrivacyViewModel(repo) }
@@ -210,7 +213,8 @@ fun AppRoot(model: Model) {
                                             pickRoute = PickRoute.SoloRecommend(context)
                                         }
                                     }
-                                }
+                                },
+                                onHistory = { pickRoute = PickRoute.History }
                             ).Content()
                         }
 
@@ -233,17 +237,45 @@ fun AppRoot(model: Model) {
                             }
                             VoteWithFriendsView(
                                 vm = voteVm,
-                                onBack = { pickRoute = PickRoute.GroupRecommend(route.ctx) }
+                                onBack = { pickRoute = PickRoute.GroupRecommend(route.ctx) },
+                                onFinish = { sessionId ->
+                                    if (sessionId.isNotBlank()) {
+                                        pickRoute = PickRoute.HistoryDetail(sessionId)
+                                    }
+                                }
                             ).Content()
                         }
 
                         is PickRoute.SoloRecommend -> {
-                            LaunchedEffect(route.ctx) {
-                                recVm.load(route.ctx)
+                            LaunchedEffect(route.ctx, recVm.uiState.items) {
+                                if (recVm.uiState.items.isEmpty()) {
+                                    recVm.load(route.ctx)
+                                }
                             }
                             RecommendsView(
                                 vm = recVm,
                                 onBack = { pickRoute = PickRoute.Main }
+                            ).Content()
+                        }
+
+                        PickRoute.History -> {
+                            LaunchedEffect(Unit) {
+                                historyVm.refresh()
+                            }
+                            VoteHistoryView(
+                                vm = historyVm,
+                                onBack = { pickRoute = PickRoute.Main },
+                                onOpenSession = { id -> pickRoute = PickRoute.HistoryDetail(id) }
+                            ).Content()
+                        }
+
+                        is PickRoute.HistoryDetail -> {
+                            val detailVm = remember(route.sessionId) {
+                                VoteHistoryDetailViewModel(pickModel, route.sessionId)
+                            }
+                            VoteHistoryDetailView(
+                                vm = detailVm,
+                                onBack = { pickRoute = PickRoute.History }
                             ).Content()
                         }
                     }

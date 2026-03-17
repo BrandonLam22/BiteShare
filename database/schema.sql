@@ -107,3 +107,43 @@ create table public.user_saved_restaurants (
     constraint user_saved_restaurants_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants2 (id) on update CASCADE on delete CASCADE,
     constraint user_saved_restaurants_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE
 ) TABLESPACE pg_default;
+
+create table public.vote_sessions (
+    id text not null,
+    title text not null,
+    created_at_epoch bigint not null,
+    is_closed boolean not null default false,
+    closed_at bigint null,
+    created_at timestamp with time zone not null default now(),
+    constraint vote_sessions_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create table public.vote_session_participants (
+    session_id text not null,
+    user_id text not null,
+    display_name text null,
+    created_at timestamp with time zone not null default now(),
+    constraint vote_session_participants_pkey primary key (session_id, user_id),
+    constraint vote_session_participants_session_id_fkey foreign KEY (session_id) references vote_sessions (id) on update CASCADE on delete CASCADE,
+    constraint vote_session_participants_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE
+) TABLESPACE pg_default;
+
+create table public.vote_session_restaurants (
+    session_id text not null,
+    restaurant_id text not null,
+    created_at timestamp with time zone not null default now(),
+    constraint vote_session_restaurants_pkey primary key (session_id, restaurant_id),
+    constraint vote_session_restaurants_session_id_fkey foreign KEY (session_id) references vote_sessions (id) on update CASCADE on delete CASCADE,
+    constraint vote_session_restaurants_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants2 (id) on update CASCADE on delete CASCADE
+) TABLESPACE pg_default;
+
+create table public.vote_session_votes (
+    session_id text not null,
+    user_id text not null,
+    restaurant_id text not null,
+    created_at timestamp with time zone not null default now(),
+    constraint vote_session_votes_pkey primary key (session_id, user_id, restaurant_id),
+    constraint vote_session_votes_session_id_fkey foreign KEY (session_id) references vote_sessions (id) on update CASCADE on delete CASCADE,
+    constraint vote_session_votes_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE,
+    constraint vote_session_votes_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants2 (id) on update CASCADE on delete CASCADE
+) TABLESPACE pg_default;

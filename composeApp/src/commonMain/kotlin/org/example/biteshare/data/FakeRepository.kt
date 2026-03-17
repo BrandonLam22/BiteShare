@@ -13,6 +13,7 @@ import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
+import org.example.biteshare.domain.VoteSession
 
 class FakeRepository(
     private val model: Model = Model(),
@@ -36,6 +37,7 @@ class FakeRepository(
     )
 
     private var notificationsEnabled = true
+    private val voteSessions = mutableListOf<VoteSession>()
 
     override suspend fun friends(): List<Friend> = model.currentUser?.friends ?: MockDB.fakeFriends
 
@@ -132,6 +134,57 @@ class FakeRepository(
 
     override suspend fun userRestrictions(): List<String> =
         model.currentUser?.foodRestrictions ?: emptyList()
+
+    override suspend fun userPreferencesByUserIds(userIds: Set<String>): Map<String, List<String>> {
+        if (userIds.isEmpty()) return emptyMap()
+        return userIds.associateWith { id ->
+            model.currentUser?.takeIf { it.id == id }?.preferences
+                ?: MockDB.fakeUsers.firstOrNull { it.id == id }?.preferences
+                ?: emptyList()
+        }.filterValues { it.isNotEmpty() }
+    }
+
+    override suspend fun userRestrictionsByUserIds(userIds: Set<String>): Map<String, List<String>> {
+        if (userIds.isEmpty()) return emptyMap()
+        return userIds.associateWith { id ->
+            model.currentUser?.takeIf { it.id == id }?.foodRestrictions
+                ?: MockDB.fakeUsers.firstOrNull { it.id == id }?.foodRestrictions
+                ?: emptyList()
+        }.filterValues { it.isNotEmpty() }
+    }
+
+    override suspend fun createVoteSession(session: VoteSession) {
+        val index = voteSessions.indexOfFirst { it.id == session.id }
+        if (index >= 0) {
+            voteSessions[index] = session
+        } else {
+            voteSessions.add(session)
+        }
+    }
+
+    override suspend fun updateVoteSessionVotes(sessionId: String, userId: String, votes: Set<String>) {
+        val index = voteSessions.indexOfFirst { it.id == sessionId }
+        if (index < 0) return
+        val session = voteSessions[index]
+        val updated = session.copy(votesByUserId = session.votesByUserId + (userId to votes))
+        voteSessions[index] = updated
+    }
+
+    override suspend fun voteSessionVotes(sessionId: String): Map<String, Set<String>> =
+        voteSessions.firstOrNull { it.id == sessionId }?.votesByUserId ?: emptyMap()
+
+    override suspend fun closeVoteSession(sessionId: String, closedAtEpoch: Long) {
+        val index = voteSessions.indexOfFirst { it.id == sessionId }
+        if (index < 0) return
+        val session = voteSessions[index]
+        voteSessions[index] = session.copy(isClosed = true, closedAtEpoch = closedAtEpoch)
+    }
+
+    override suspend fun voteSessionsForUser(userId: String): List<VoteSession> =
+        voteSessions.filter { session -> session.participants.any { it.id == userId } }
+
+    override suspend fun voteSessionById(sessionId: String): VoteSession? =
+        voteSessions.firstOrNull { it.id == sessionId }
 
     override suspend fun getProfile(): ProfileData {
         val user = model.currentUser ?: MockDB.fakeUsers.firstOrNull()

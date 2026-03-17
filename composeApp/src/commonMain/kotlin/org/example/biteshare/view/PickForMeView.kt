@@ -24,6 +24,7 @@ import org.example.biteshare.viewmodel.PickForMeViewModel
 class PickForMeView(
     private val vm: PickForMeViewModel,
     private val onGo: () -> Unit,
+    private val onHistory: () -> Unit,
 ) {
     @Composable
     fun Content() {
@@ -70,7 +71,12 @@ class PickForMeView(
                     }
                 }
 
-                Spacer(Modifier.height(26.dp))
+                Spacer(Modifier.height(18.dp))
+                Button(onClick = onHistory) {
+                    Text("View Voting History")
+                }
+
+                Spacer(Modifier.height(22.dp))
             } else {
                 Spacer(Modifier.height(8.dp))
             }
@@ -276,4 +282,5 @@ class PickForMeView(
             Text(name, style = MaterialTheme.typography.labelMedium)
         }
     }
+
 }
