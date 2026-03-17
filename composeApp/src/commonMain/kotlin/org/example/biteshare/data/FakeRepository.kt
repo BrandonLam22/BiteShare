@@ -14,6 +14,8 @@ import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteSession
+import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.User
 
 class FakeRepository(
     private val model: Model = Model(),
@@ -111,7 +113,21 @@ class FakeRepository(
 
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
         val summary = getRestaurantById(id) ?: return null
-        return MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
+        val baseDetail = MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
+        val reviews = getReviewsForRestaurant(summary.name)
+        val averageRating = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: baseDetail.rating
+        return baseDetail.copy(
+            reviews = reviews,
+            rating = averageRating,
+        )
+    }
+
+    override suspend fun getReviewsForRestaurant(restaurantName: String): List<Review> =
+        (model.getReviewsForRestaurant(restaurantName) + MockDB.reviewsForRestaurant(restaurantName))
+            .distinctBy { it.id }
+
+    override suspend fun submitReview(review: Review) {
+        model.addReview(review)
     }
 
     override suspend fun getRestaurantsByTag(tag: String): List<Restaurant> {
@@ -336,5 +352,18 @@ class FakeRepository(
 
     override suspend fun updatePassword(newPassword: String) {
         model.updateUserPassword(newPassword)
+    }
+
+    // Login/Signup
+    override suspend fun login(username: String, password: String): User? {
+        return if (model.login(username, password)) model.currentUser else null
+    }
+
+    override suspend fun signup(username: String, password: String, email: String): User? {
+        return if (model.signup(username, password, email)) model.currentUser else null
+    }
+
+    override suspend fun verifyCurrentPassword(password: String): Boolean {
+        return password == getPassword()
     }
 }

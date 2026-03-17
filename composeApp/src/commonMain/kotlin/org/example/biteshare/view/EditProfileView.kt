@@ -168,17 +168,26 @@ class EditProfileView(
 
             Spacer(Modifier.height(32.dp))
 
+            s.errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
             // Save button
             Button(
-                onClick = {
-                    vm.saveProfile()
-                    onBack()
-                },
+                onClick = { vm.saveProfile(onSuccess = onBack) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                enabled = s.hasChanges
+                enabled = s.hasChanges && !s.isSaving
             ) {
-                Text("Save Changes", modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = if (s.isSaving) "Saving..." else "Save Changes",
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
 
             Spacer(Modifier.height(16.dp))

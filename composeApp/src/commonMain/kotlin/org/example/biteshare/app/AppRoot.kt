@@ -108,7 +108,7 @@ fun AppRoot(model: Model) {
     val privacyVm = remember(repo) { PrivacyViewModel(repo) }
     val helpVm = remember(repo) { HelpViewModel(repo) }
     val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
-    val reviewVm = remember(model) { ReviewViewModel(model) }
+    val reviewVm = remember(model, repo) { ReviewViewModel(model, repo) }
     val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
     val changePasswordVm = remember(repo) { ChangePasswordViewModel(repo) }
 

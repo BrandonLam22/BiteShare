@@ -523,6 +523,17 @@ class Model {
         return currentUser?.savedRestaurantIds?.toSet() ?: emptySet()
     }
 
+    fun updateSavedRestaurants(savedRestaurantIds: List<String>) {
+        val user = currentUser ?: return
+        val updatedUser = user.copy(savedRestaurantIds = savedRestaurantIds.distinct())
+        currentUser = updatedUser
+
+        val index = _users.indexOfFirst { it.id == user.id }
+        if (index != -1) {
+            _users[index] = updatedUser
+        }
+    }
+
     fun logout() {
         currentUser = null
         println("User logged out")
@@ -555,7 +566,19 @@ class Model {
     }
 
     fun updateUserPassword(newPassword: String) {
-        currentUser = currentUser?.copy(password = newPassword)
+        val user = currentUser ?: return
+        val updatedUser = user.copy(password = newPassword)
+        currentUser = updatedUser
+
+        val index = _users.indexOfFirst { it.id == user.id }
+        if (index != -1) {
+            _users[index] = updatedUser
+        }
     }
+
+    fun applyAuthenticatedUser(user: User?) {
+        currentUser = user
+    }
+
 
 }

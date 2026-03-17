@@ -17,7 +17,9 @@ data class EditProfileUiState(
     val restrictionInput: String = "",
     val showPreferenceError: Boolean = false,
     val showRestrictionError: Boolean = false,
-    val hasChanges: Boolean = false
+    val hasChanges: Boolean = false,
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null
 )
 
 class EditProfileViewModel(
@@ -35,16 +37,23 @@ class EditProfileViewModel(
 
     private fun loadProfile() {
         scope.launch {
-            val profile = repo.getEditableProfile()
-            val initialState = EditProfileUiState(
-                username = profile.username,
-                email = profile.email,
-                bio = profile.bio,
-                preferences = profile.preferences.toSet(),
-                foodRestrictions = profile.foodRestrictions.toSet()
-            )
-            uiState = initialState
-            originalState = initialState
+            runCatching { repo.getEditableProfile() }
+                .onSuccess { profile ->
+                    val initialState = EditProfileUiState(
+                        username = profile.username,
+                        email = profile.email,
+                        bio = profile.bio,
+                        preferences = profile.preferences.toSet(),
+                        foodRestrictions = profile.foodRestrictions.toSet()
+                    )
+                    uiState = initialState
+                    originalState = comparableState(initialState)
+                }
+                .onFailure { throwable ->
+                    uiState = uiState.copy(
+                        errorMessage = throwable.message ?: "Unable to load your profile."
+                    )
+                }
         }
     }
 
@@ -137,26 +146,48 @@ class EditProfileViewModel(
 
     private fun checkForChanges() {
         uiState = uiState.copy(
-            hasChanges = uiState.copy(
-                preferenceInput = "",
-                restrictionInput = "",
-                showPreferenceError = false,
-                showRestrictionError = false
-            ) != originalState
+            hasChanges = comparableState(uiState) != originalState
         )
     }
 
-    fun saveProfile() {
+    fun saveProfile(onSuccess: () -> Unit = {}) {
+        if (uiState.isSaving) return
+
         val snapshot = uiState
+        val savedState = comparableState(snapshot)
+        uiState = uiState.copy(isSaving = true, errorMessage = null)
         scope.launch {
-            repo.updateProfile(
-                username = snapshot.username,
-                email = snapshot.email,
-                bio = snapshot.bio,
-                preferences = snapshot.preferences.toList(),
-                foodRestrictions = snapshot.foodRestrictions.toList()
-            )
+            runCatching {
+                repo.updateProfile(
+                    username = snapshot.username,
+                    email = snapshot.email,
+                    bio = snapshot.bio,
+                    preferences = snapshot.preferences.toList(),
+                    foodRestrictions = snapshot.foodRestrictions.toList()
+                )
+            }.onSuccess {
+                originalState = savedState
+                uiState = savedState
+                onSuccess()
+            }.onFailure { throwable ->
+                uiState = uiState.copy(
+                    isSaving = false,
+                    errorMessage = throwable.message ?: "Unable to save your profile."
+                )
+            }
         }
+    }
+
+    private fun comparableState(state: EditProfileUiState): EditProfileUiState {
+        return state.copy(
+            preferenceInput = "",
+            restrictionInput = "",
+            showPreferenceError = false,
+            showRestrictionError = false,
+            hasChanges = false,
+            isSaving = false,
+            errorMessage = null
+        )
     }
 }
 

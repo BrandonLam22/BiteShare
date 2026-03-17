@@ -13,6 +13,8 @@ import org.example.biteshare.view.SignupView
 import org.example.biteshare.viewmodel.WelcomeViewModel
 import org.example.biteshare.viewmodel.LoginViewModel
 import org.example.biteshare.viewmodel.SignupViewModel
+import org.example.biteshare.data.BiteShareRepository
+import org.example.biteshare.data.SupabaseRepository
 
 
 private sealed class AuthScreen {
@@ -24,6 +26,8 @@ private sealed class AuthScreen {
 
 @Composable
 fun AuthGate(model: Model) {
+    val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
+
     val isLoggedIn = model.currentUser != null
 
     var currentScreen by remember { mutableStateOf<AuthScreen>(
@@ -49,7 +53,7 @@ fun AuthGate(model: Model) {
             )
         }
         is AuthScreen.Login -> {
-            val loginVm = remember { LoginViewModel(model) }
+            val loginVm = remember(repo) { LoginViewModel(model, repo) }
             LoginView(
                 viewModel = loginVm,
                 onLoginSuccess = { currentScreen = AuthScreen.Home },
@@ -57,7 +61,7 @@ fun AuthGate(model: Model) {
             )
         }
         is AuthScreen.Signup -> {
-            val signupVm = remember { SignupViewModel(model) }
+            val signupVm = remember(repo) { SignupViewModel(model, repo) }
             SignupView(
                 viewModel = signupVm,
                 onSignupSuccess = { currentScreen = AuthScreen.Home },
