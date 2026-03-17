@@ -10,9 +10,10 @@ import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.Review
+import kotlin.time.Clock
 
 class ReviewViewModel(
-    model: Model,
+    private val model: Model,
     private val repo: BiteShareRepository = FakeRepository(model),
 ) {
     private val scope = MainScope()
@@ -165,7 +166,10 @@ class ReviewViewModel(
             restaurantName = chosenRestaurant,
             tags = this.selectedTags.toList(),
             content = this.reviewText,
-            rating = this.rating
+            rating = this.rating,
+            userId = model.currentUser?.id,
+            username = model.currentUser?.username,
+            createdAt = Clock.System.now().toString(),
         )
 
         isPosting = true

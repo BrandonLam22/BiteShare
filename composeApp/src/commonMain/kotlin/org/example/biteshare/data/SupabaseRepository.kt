@@ -162,14 +162,22 @@ class SupabaseRepository(
         if (normalizedName.isBlank()) return emptyList()
 
         return try {
-            client.from(reviewsTable)
+            val reviewRows = client.from(reviewsTable)
                 .select(Columns.raw("*")) {
                     filter {
                         eq("restaurant_name", normalizedName)
                     }
                 }
                 .decodeList<JsonObject>()
-                .mapNotNull { it.toReview() }
+
+            val usernameByUserId = mutableMapOf<String, String?>()
+            reviewRows.mapNotNull { row ->
+                val userId = row.getString("user_id").takeIf { it.isNotBlank() }
+                if (userId != null && userId !in usernameByUserId) {
+                    usernameByUserId[userId] = getUsernameByUserId(userId)
+                }
+                row.toReview(usernameByUserId[userId])
+            }.sortedByDescending { review -> review.createdAt.orEmpty() }
         } catch (t: Throwable) {
             fallback.getReviewsForRestaurant(normalizedName)
         }
@@ -293,7 +301,20 @@ class SupabaseRepository(
         )
     }
 
-    private fun JsonObject.toReview(): Review? {
+    private suspend fun getUsernameByUserId(userId: String): String? {
+        return client.from(usersTable)
+            .select(Columns.list("username")) {
+                filter {
+                    eq("id", userId)
+                }
+                limit(1)
+            }
+            .decodeSingleOrNull<JsonObject>()
+            ?.getString("username")
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun JsonObject.toReview(username: String?): Review? {
         val restaurantName = getString("restaurant_name")
         if (restaurantName.isBlank()) return null
 
@@ -303,6 +324,9 @@ class SupabaseRepository(
             tags = getStringList("tags"),
             content = getString("content"),
             rating = getInt("rating", 5),
+            userId = getString("user_id").takeIf { it.isNotBlank() },
+            username = username,
+            createdAt = getString("created_at").takeIf { it.isNotBlank() },
         )
     }
 
