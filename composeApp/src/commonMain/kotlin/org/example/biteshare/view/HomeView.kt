@@ -250,6 +250,7 @@ class HomeView(
                             FriendSearchResultCard(
                                 friend = friend,
                                 isFriend = friend.id in s.currentFriendIds,
+                                isPending = friend.id in s.outgoingRequestUserIds,
                                 enabled = !s.isFriendActionLoading,
                                 onToggle = { vm.toggleFriend(friend) }
                             )
@@ -521,6 +522,7 @@ class HomeView(
     private fun FriendSearchResultCard(
         friend: Friend,
         isFriend: Boolean,
+        isPending: Boolean,
         enabled: Boolean,
         onToggle: () -> Unit,
     ) {
@@ -563,10 +565,16 @@ class HomeView(
                 }
                 FilledTonalButton(
                     onClick = onToggle,
-                    enabled = enabled,
+                    enabled = enabled && !isPending,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Text(if (isFriend) "−" else "+")
+                    Text(
+                        when {
+                            isFriend -> "-"
+                            isPending -> "Requested"
+                            else -> "+"
+                        }
+                    )
                 }
             }
         }

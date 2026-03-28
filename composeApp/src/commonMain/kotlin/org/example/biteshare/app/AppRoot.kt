@@ -55,6 +55,8 @@ import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.VoteHistoryDetailViewModel
 import org.example.biteshare.viewmodel.VoteHistoryViewModel
 import org.example.biteshare.viewmodel.VoteWithFriendsViewModel
+import org.example.biteshare.view.FriendRequestsView
+import org.example.biteshare.viewmodel.FriendRequestsViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
 
@@ -80,8 +82,8 @@ private sealed class ProfileRoute {
     data object Help : ProfileRoute()
     data object EditProfile : ProfileRoute()
     data object FriendsList : ProfileRoute()
-
     data object ChangePassword : ProfileRoute()
+    data object FriendRequests : ProfileRoute()
 }
 
 @Composable
@@ -111,6 +113,7 @@ fun AppRoot(model: Model) {
     val reviewVm = remember(model, repo) { ReviewViewModel(model, repo) }
     val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
     val changePasswordVm = remember(repo) { ChangePasswordViewModel(repo) }
+    val friendRequestsVm = remember(repo) { FriendRequestsViewModel(repo) }
 
     Scaffold(
         bottomBar = {
@@ -140,6 +143,7 @@ fun AppRoot(model: Model) {
                     onClick = {
                         tab = Tab.Profile
                         profileRoute = ProfileRoute.Main
+                        profileVm.loadProfile()
                     },
                     icon = { Text("👤") },
                     label = { Text("Profile") }
@@ -304,8 +308,26 @@ fun AppRoot(model: Model) {
                                 onHelp = { profileRoute = ProfileRoute.Help },
                                 onLogout = {},
                                 onEditProfile = { profileRoute = ProfileRoute.EditProfile },
-                                onFriendsList = { profileRoute = ProfileRoute.FriendsList }
+                                onFriendsList = { profileRoute = ProfileRoute.FriendsList },
+                                onFriendRequests = { profileRoute = ProfileRoute.FriendRequests }
                             ).Content()
+                        }
+
+                        ProfileRoute.FriendRequests -> {
+                            val view = remember {
+                                FriendRequestsView(
+                                    vm = friendRequestsVm,
+                                    onBack = {
+                                        profileVm.loadProfile()
+                                        friendsListVm.refresh()
+                                        profileRoute = ProfileRoute.Main
+                                    }
+                                )
+                            }
+                            LaunchedEffect(Unit) {
+                                friendRequestsVm.loadRequests()
+                            }
+                            view.Content()
                         }
 
                         ProfileRoute.EditProfile -> {

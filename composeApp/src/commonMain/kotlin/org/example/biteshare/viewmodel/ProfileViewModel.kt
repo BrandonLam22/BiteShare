@@ -12,6 +12,7 @@ data class ProfileUiState(
     val email: String = "",
     val friendCount: Int = 0,
     val notificationsEnabled: Boolean = false,
+    val incomingRequestCount: Int = 0,
 )
 
 class ProfileViewModel(
@@ -29,11 +30,14 @@ class ProfileViewModel(
     fun loadProfile() {
         scope.launch {
             val profileData = repo.getProfile()  // CHANGED: Get from repository
+            val incomingRequests = repo.incomingFriendRequests()
+
             uiState = ProfileUiState(
                 name = profileData.name,
                 email = profileData.email,
                 friendCount = profileData.friendCount,
-                notificationsEnabled = profileData.notificationsEnabled
+                notificationsEnabled = profileData.notificationsEnabled,
+                incomingRequestCount = incomingRequests.size
             )
         }
     }

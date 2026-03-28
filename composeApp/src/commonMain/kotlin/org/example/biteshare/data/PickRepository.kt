@@ -5,12 +5,22 @@ import org.example.biteshare.domain.FriendAddResult
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.VoteSession
+import org.example.biteshare.domain.FriendRequest
+import org.example.biteshare.domain.FriendRequestResult
 
 interface PickRepository {
     suspend fun friends(): List<Friend>
     suspend fun searchUsers(query: String): List<Friend> = emptyList()
     suspend fun addFriend(friendId: String): FriendAddResult = FriendAddResult.ERROR
     suspend fun removeFriend(friendId: String): Boolean = false
+
+    // FRIEND REQUEST
+    suspend fun sendFriendRequest(targetUserId: String): FriendRequestResult = FriendRequestResult.ERROR
+    suspend fun incomingFriendRequests(): List<FriendRequest> = emptyList()
+    suspend fun outgoingFriendRequests(): List<FriendRequest> = emptyList()
+    suspend fun acceptFriendRequest(requestId: String): Boolean = false
+    suspend fun rejectFriendRequest(requestId: String): Boolean = false
+
     suspend fun locations(): List<String>
     suspend fun restaurants(): List<Restaurant>
     suspend fun getRestaurantDetailById(id: String): RestaurantDetail?

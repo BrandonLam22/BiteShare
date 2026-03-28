@@ -42,6 +42,32 @@ class SupabaseRepository(
     private val reviewsTable = "reviews"
     private val userSavedRestaurantsTable = "user_saved_restaurants"
 
+    // FRIEND REQUEST
+    private val pickDbRepo = PickDbRepository(
+        client = client,
+        userIdProvider = { model.currentUser?.id }
+    )
+
+    override suspend fun sendFriendRequest(targetUserId: String) =
+        pickDbRepo.sendFriendRequest(targetUserId)
+
+    override suspend fun incomingFriendRequests() =
+        pickDbRepo.incomingFriendRequests()
+
+    override suspend fun outgoingFriendRequests() =
+        pickDbRepo.outgoingFriendRequests()
+
+    override suspend fun acceptFriendRequest(requestId: String): Boolean {
+        val accepted = pickDbRepo.acceptFriendRequest(requestId)
+        if (accepted) {
+            cachedUserRow = null
+        }
+        return accepted
+    }
+
+    override suspend fun rejectFriendRequest(requestId: String) =
+        pickDbRepo.rejectFriendRequest(requestId)
+
     override suspend fun login(username: String, password: String): User? {
         val normalizedUsername = username.trim()
 
@@ -318,10 +344,22 @@ class SupabaseRepository(
 
     override suspend fun getProfile(): ProfileData {
         val row = fetchUserRow() ?: return fallback.getProfile()
+        val userId = model.currentUser?.id ?: return fallback.getProfile()
+        val freshFriendCount = try {
+            client.from("friends")
+                .select {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<JsonObject>()
+                .size
+        } catch (t: Throwable) {
+            row.friendCount
+        }
+
         return ProfileData(
             name = row.username,
             email = row.email,
-            friendCount = row.friendCount,
+            friendCount = freshFriendCount,
             notificationsEnabled = row.notificationsEnabled
         )
     }
@@ -429,7 +467,7 @@ class SupabaseRepository(
                 .decodeList<JsonObject>()
 
             friendRows.mapNotNull { row ->
-                val friendId = row.getString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val friendId = row.getString("friend_id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 val friendUser = client.from(usersTable)
                     .select(Columns.list("id", "username")) {
                         filter { eq("id", friendId) }
