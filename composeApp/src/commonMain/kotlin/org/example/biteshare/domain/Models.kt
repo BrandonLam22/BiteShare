@@ -245,11 +245,17 @@ class PickModel(
     suspend fun voteSessionsForCurrentUser(): List<VoteSession> {
         val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return emptyList()
         return repo.voteSessionsForUser(userId).map { session ->
-            val participants = session.participants.map { participant ->
+            val participants = mutableListOf<VoteParticipant>()
+            session.participants.forEach { participant ->
                 if (participant.id == userId) {
-                    participant.copy(name = "You", isSelf = true)
+                    participants += participant.copy(name = "You", isSelf = true)
                 } else {
-                    participant.copy(isSelf = false)
+                    val fixedName = if (participant.name == "You") {
+                        userDisplayName(participant.id)?.takeIf { it.isNotBlank() } ?: participant.id
+                    } else {
+                        participant.name
+                    }
+                    participants += participant.copy(name = fixedName, isSelf = false)
                 }
             }
             session.copy(participants = participants)
@@ -260,14 +266,36 @@ class PickModel(
         val userId = currentUserId()?.takeIf { it.isNotBlank() }
         val session = repo.voteSessionById(sessionId) ?: return null
         if (userId == null) return session
-        val participants = session.participants.map { participant ->
+        val participants = mutableListOf<VoteParticipant>()
+        session.participants.forEach { participant ->
             if (participant.id == userId) {
-                participant.copy(name = "You", isSelf = true)
+                participants += participant.copy(name = "You", isSelf = true)
             } else {
-                participant.copy(isSelf = false)
+                val fixedName = if (participant.name == "You") {
+                    userDisplayName(participant.id)?.takeIf { it.isNotBlank() } ?: participant.id
+                } else {
+                    participant.name
+                }
+                participants += participant.copy(name = fixedName, isSelf = false)
             }
         }
         return session.copy(participants = participants)
+    }
+
+    suspend fun voteNotificationsForCurrentUser(): List<VoteNotification> {
+        val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return emptyList()
+        return repo.voteNotificationsForUser(userId)
+    }
+
+    suspend fun markVoteNotificationsRead(sessionId: String) {
+        val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return
+        if (sessionId.isBlank()) return
+        repo.markVoteNotificationsRead(sessionId, userId)
+    }
+
+    suspend fun userDisplayName(userId: String): String? {
+        if (userId.isBlank()) return null
+        return repo.userDisplayName(userId)
     }
 
     private suspend fun mergedPreferences(context: PickContext): List<String> {

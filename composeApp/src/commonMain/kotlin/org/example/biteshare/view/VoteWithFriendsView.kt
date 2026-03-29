@@ -135,7 +135,7 @@ class VoteWithFriendsView(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-                    Text(if (s.isVotingClosed) "Back" else "Cancel")
+                    Text("Back")
                 }
                 Button(
                     onClick = {
@@ -145,7 +145,7 @@ class VoteWithFriendsView(
                     modifier = Modifier.weight(1f),
                     enabled = !s.isVotingClosed
                 ) {
-                    Text(if (s.isVotingClosed) "Voting Closed" else "Finish Voting")
+                    Text(if (s.isVotingClosed) "Voting Closed" else "Done")
                 }
             }
 

@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PickContext
+import org.example.biteshare.domain.PickMode
 import org.example.biteshare.domain.PickModel
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.VoteParticipant
@@ -27,86 +28,40 @@ class VoteWithFriendsViewModel(
     private val context: PickContext,
     private val candidateRestaurants: List<Restaurant> = emptyList(),
     private val pollIntervalMs: Long = DEFAULT_VOTE_POLL_MS,
+    private val existingSessionId: String? = null,
 ) {
     var uiState by mutableStateOf(VoteWithFriendsUiState())
         private set
 
     private val scope = MainScope()
     private var currentUserId: String? = null
-    val sessionId: String = "vote_${System.currentTimeMillis()}_${kotlin.random.Random.nextInt(1000, 9999)}"
+    val sessionId: String = existingSessionId?.takeIf { it.isNotBlank() }
+        ?: "vote_${System.currentTimeMillis()}_${kotlin.random.Random.nextInt(1000, 9999)}"
     private var participants: List<Friend> = emptyList()
     private var recommended: List<Restaurant> = emptyList()
     private var recommendedIds: Set<String> = emptySet()
     private var pollJob: Job? = null
 
+    constructor(
+        model: PickModel,
+        sessionId: String,
+        pollIntervalMs: Long = DEFAULT_VOTE_POLL_MS,
+    ) : this(
+        model = model,
+        context = PickContext(mode = PickMode.WITH_FRIENDS),
+        candidateRestaurants = emptyList(),
+        pollIntervalMs = pollIntervalMs,
+        existingSessionId = sessionId,
+    )
+
     init {
         scope.launch {
-            val allFriends = model.friends()
-            val selectedFriends = allFriends.filter { it.id in context.selectedFriendIds }
-            participants = if (selectedFriends.isNotEmpty()) selectedFriends else allFriends
-            recommended = if (candidateRestaurants.isNotEmpty()) {
-                candidateRestaurants
+            val existingId = existingSessionId?.takeIf { it.isNotBlank() }
+            if (existingId != null) {
+                loadExistingSession(existingId)
             } else {
-                model.recommend(context)
+                createNewSession()
             }
-            recommendedIds = recommended.map { it.id }.toSet()
-            val myUserId = model.currentUserId()?.takeIf { it.isNotBlank() }
-            currentUserId = myUserId
-            val selectionUserIds = buildSet {
-                addAll(participants.map { it.id })
-                myUserId?.let { add(it) }
-            }
-            val selectionsByUser = if (selectionUserIds.isEmpty()) {
-                emptyMap()
-            } else {
-                model.restaurantSelectionsByUserIds(selectionUserIds)
-            }
-            val myAllVotes = myUserId?.let { selectionsByUser[it].orEmpty() }.orEmpty()
-            val myVotes = myAllVotes.filter { it in recommendedIds }.toSet()
-            val friendVotes = participants
-                .filter { it.id != myUserId }
-                .associate { friend ->
-                    friend.id to selectionsByUser[friend.id].orEmpty().filter { it in recommendedIds }.toSet()
-                }
-            uiState = VoteWithFriendsUiState(
-                friends = participants,
-                restaurants = recommended,
-                myVotes = myVotes,
-                friendVotes = friendVotes
-            )
-
-            val participantMap = linkedMapOf<String, VoteParticipant>()
-            participants.forEach { friend ->
-                if (friend.id.isNotBlank()) {
-                    participantMap[friend.id] = VoteParticipant(id = friend.id, name = friend.name)
-                }
-            }
-            myUserId?.let { id ->
-                if (id.isNotBlank()) {
-                    participantMap[id] = VoteParticipant(id = id, name = "You", isSelf = true)
-                }
-            }
-            val voteParticipants = participantMap.values.toList()
-            val title = if (participants.isEmpty()) {
-                "Group vote"
-            } else {
-                "Vote with " + participants.joinToString(", ") { it.name }
-            }
-            val votesByUserId = buildMap {
-                if (myUserId != null) put(myUserId, myVotes)
-                friendVotes.forEach { (id, votes) -> put(id, votes) }
-            }
-            model.createVoteSession(
-                session = VoteSession(
-                    id = sessionId,
-                    title = title,
-                    createdAtEpoch = System.currentTimeMillis(),
-                    participants = voteParticipants,
-                    restaurants = recommended,
-                    votesByUserId = votesByUserId
-                )
-            )
-
             refreshVotesFromSession(refreshClosed = true)
             startPolling()
         }
@@ -118,23 +73,13 @@ class VoteWithFriendsViewModel(
         val newVotes = if (restaurantId in oldVotes) oldVotes - restaurantId else oldVotes + restaurantId
         uiState = uiState.copy(myVotes = newVotes)
         val myUserId = currentUserId ?: return
-        val selected = restaurantId in newVotes
-        scope.launch {
-            model.setRestaurantSelection(myUserId, restaurantId, selected)
-        }
         scope.launch {
             model.updateVoteSessionVotes(sessionId, myUserId, newVotes)
         }
     }
 
     fun finishVoting() {
-        if (uiState.isVotingClosed) return
-        uiState = uiState.copy(isVotingClosed = true)
         pollJob?.cancel()
-        val closedAt = System.currentTimeMillis()
-        scope.launch {
-            model.closeVoteSession(sessionId, closedAt)
-        }
     }
 
     fun isMySelection(restaurantId: String): Boolean = restaurantId in uiState.myVotes
@@ -182,6 +127,100 @@ class VoteWithFriendsViewModel(
             val session = model.voteSessionById(sessionId)
             uiState = uiState.copy(isVotingClosed = session?.isClosed == true)
         }
+    }
+
+    private suspend fun loadExistingSession(existingId: String) {
+        val session = model.voteSessionById(existingId) ?: return
+        val myUserId = model.currentUserId()?.takeIf { it.isNotBlank() }
+        currentUserId = myUserId
+
+        val allParticipants = session.participants.map { participant ->
+            Friend(id = participant.id, name = participant.name)
+        }
+        participants = if (myUserId != null) {
+            allParticipants.filter { it.id != myUserId }
+        } else {
+            allParticipants
+        }
+
+        recommended = session.restaurants
+        recommendedIds = recommended.map { it.id }.toSet()
+
+        val votesByUserId = session.votesByUserId
+        val myVotes = myUserId?.let { votesByUserId[it].orEmpty() }.orEmpty()
+            .filter { it in recommendedIds }
+            .toSet()
+        val friendVotes = participants.associate { friend ->
+            friend.id to votesByUserId[friend.id].orEmpty().filter { it in recommendedIds }.toSet()
+        }
+        uiState = VoteWithFriendsUiState(
+            friends = participants,
+            restaurants = recommended,
+            myVotes = myVotes,
+            friendVotes = friendVotes,
+            isVotingClosed = session.isClosed
+        )
+        if (myUserId != null) {
+            model.markVoteNotificationsRead(existingId)
+        }
+    }
+
+    private suspend fun createNewSession() {
+        val allFriends = model.friends()
+        val selectedFriends = allFriends.filter { it.id in context.selectedFriendIds }
+        participants = if (selectedFriends.isNotEmpty()) selectedFriends else allFriends
+        recommended = if (candidateRestaurants.isNotEmpty()) {
+            candidateRestaurants
+        } else {
+            model.recommend(context)
+        }
+        recommendedIds = recommended.map { it.id }.toSet()
+        val myUserId = model.currentUserId()?.takeIf { it.isNotBlank() }
+        currentUserId = myUserId
+        val myDisplayName = myUserId?.let { id ->
+            model.userDisplayName(id)?.takeIf { it.isNotBlank() } ?: id
+        }
+        val myVotes = emptySet<String>()
+        val friendVotes = emptyMap<String, Set<String>>()
+        uiState = VoteWithFriendsUiState(
+            friends = participants,
+            restaurants = recommended,
+            myVotes = myVotes,
+            friendVotes = friendVotes
+        )
+
+        val participantMap = linkedMapOf<String, VoteParticipant>()
+        participants.forEach { friend ->
+            if (friend.id.isNotBlank()) {
+                participantMap[friend.id] = VoteParticipant(id = friend.id, name = friend.name)
+            }
+        }
+        myUserId?.let { id ->
+            if (id.isNotBlank()) {
+                participantMap[id] = VoteParticipant(
+                    id = id,
+                    name = myDisplayName ?: id,
+                    isSelf = true
+                )
+            }
+        }
+        val voteParticipants = participantMap.values.toList()
+        val title = if (participants.isEmpty()) {
+            "Group vote"
+        } else {
+            "Vote with " + participants.joinToString(", ") { it.name }
+        }
+        val votesByUserId = emptyMap<String, Set<String>>()
+        model.createVoteSession(
+            session = VoteSession(
+                id = sessionId,
+                title = title,
+                createdAtEpoch = System.currentTimeMillis(),
+                participants = voteParticipants,
+                restaurants = recommended,
+                votesByUserId = votesByUserId
+            )
+        )
     }
 
     private fun applyVotesFromSession(votesByUser: Map<String, Set<String>>) {

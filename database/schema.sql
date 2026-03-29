@@ -200,3 +200,16 @@ create unique INDEX IF not exists friend_requests_one_pending_pair_idx on public
     ) TABLESPACE pg_default
     where
     (status = 'pending'::text);
+
+create table public.vote_notifications (
+    id uuid not null default gen_random_uuid (),
+    session_id text not null,
+    user_id text not null,
+    created_at_epoch bigint not null,
+    read_at_epoch bigint null,
+    created_at timestamp with time zone not null default now(),
+    constraint vote_notifications_pkey primary key (id),
+    constraint vote_notifications_session_id_fkey foreign KEY (session_id) references vote_sessions (id) on update CASCADE on delete CASCADE,
+    constraint vote_notifications_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE,
+    constraint vote_notifications_session_user_key unique (session_id, user_id)
+) TABLESPACE pg_default;

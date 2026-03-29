@@ -25,6 +25,7 @@ import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteParticipant
 import org.example.biteshare.domain.VoteSession
+import org.example.biteshare.domain.VoteNotification
 import org.example.biteshare.domain.FriendRequest
 import org.example.biteshare.domain.FriendRequestResult
 import org.example.biteshare.domain.FriendRequestStatus
@@ -45,6 +46,7 @@ class PickDbRepository(
     private val voteParticipantsTable = "vote_session_participants"
     private val voteRestaurantsTable = "vote_session_restaurants"
     private val voteSessionVotesTable = "vote_session_votes"
+    private val voteNotificationsTable = "vote_notifications"
     private val defaultUserId = "demo_user"
     private var searchSignalCache: Map<String, String>? = null
     private val friendRequestsTable = "friend_requests"
@@ -586,6 +588,27 @@ class PickDbRepository(
                     onConflict = "session_id,user_id,restaurant_id"
                 }
             }
+
+            val creatorId = effectiveUserId().takeIf { it.isNotBlank() }
+            val notificationRows = session.participants
+                .map { it.id }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .filter { it != creatorId }
+                .map { userId ->
+                    buildJsonObject {
+                        put("session_id", session.id)
+                        put("user_id", userId)
+                        put("created_at_epoch", session.createdAtEpoch)
+                    }
+                }
+            if (notificationRows.isNotEmpty()) {
+                client.postgrest[voteNotificationsTable].upsert(
+                    body = JsonArray(notificationRows)
+                ) {
+                    onConflict = "session_id,user_id"
+                }
+            }
         }
     }
 
@@ -666,6 +689,49 @@ class PickDbRepository(
         runCatching {
             if (sessionId.isBlank()) return@runCatching null
             buildVoteSessions(listOf(sessionId)).firstOrNull()
+        }.getOrElse { null }
+
+    override suspend fun voteNotificationsForUser(userId: String): List<VoteNotification> =
+        runCatching {
+            if (userId.isBlank()) return@runCatching emptyList()
+            val raw = client.postgrest[voteNotificationsTable]
+                .select(Columns.raw("id, session_id, user_id, created_at_epoch, read_at_epoch")) {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row ->
+                val id = row.getString("id")
+                val sessionId = row.getString("session_id")
+                val ownerId = row.getString("user_id")
+                if (id.isBlank() || sessionId.isBlank() || ownerId.isBlank()) return@mapNotNull null
+                VoteNotification(
+                    id = id,
+                    sessionId = sessionId,
+                    userId = ownerId,
+                    createdAtEpoch = row.getLong("created_at_epoch"),
+                    readAtEpoch = row.getLong("read_at_epoch").takeIf { it > 0 }
+                )
+            }
+        }.getOrElse { emptyList() }
+
+    override suspend fun markVoteNotificationsRead(sessionId: String, userId: String) {
+        if (sessionId.isBlank() || userId.isBlank()) return
+        val now = System.currentTimeMillis()
+        runCatching {
+            client.postgrest[voteNotificationsTable].update(
+                body = buildJsonObject { put("read_at_epoch", now) }
+            ) {
+                filter {
+                    eq("session_id", sessionId)
+                    eq("user_id", userId)
+                }
+            }
+        }
+    }
+
+    override suspend fun userDisplayName(userId: String): String? =
+        runCatching {
+            getUsernameById(userId).takeIf { it.isNotBlank() }
         }.getOrElse { null }
 
     override suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> =
