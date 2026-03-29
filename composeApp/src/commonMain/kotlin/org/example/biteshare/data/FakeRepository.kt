@@ -182,6 +182,14 @@ class FakeRepository(
         (model.getReviewsForRestaurant(restaurantName) + MockDB.reviewsForRestaurant(restaurantName))
             .distinctBy { it.id }
 
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> {
+        val filtered = userIds.filter { it.isNotBlank() }.toSet()
+        if (filtered.isEmpty()) return emptyList()
+        return (model.reviews + MockDB.fakeReviews)
+            .filter { review -> review.userId != null && review.userId in filtered }
+            .distinctBy { it.id }
+    }
+
     override suspend fun submitReview(review: Review) {
         model.addReview(review)
     }

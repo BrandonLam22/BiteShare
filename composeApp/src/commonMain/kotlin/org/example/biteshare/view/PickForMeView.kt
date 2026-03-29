@@ -148,21 +148,6 @@ class PickForMeView(
 
             Spacer(Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Open now only",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Switch(
-                    checked = s.filters.openNowOnly,
-                    onCheckedChange = vm::setOpenNowOnly
-                )
-            }
-
             Text(
                 text = "Minimum rating: ${s.filters.minRating}/10",
                 style = MaterialTheme.typography.bodyMedium

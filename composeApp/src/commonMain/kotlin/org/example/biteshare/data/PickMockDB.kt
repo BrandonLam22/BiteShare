@@ -4,6 +4,7 @@ import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.VoteSession
 
 class PickMockDB(
@@ -17,6 +18,7 @@ class PickMockDB(
     preferencesByUserId: Map<String, List<String>> = emptyMap(),
     restrictionsByUserId: Map<String, List<String>> = emptyMap(),
     savedSelectionsByUserId: Map<String, Set<String>> = emptyMap(),
+    reviewsByUserId: Map<String, List<Review>> = emptyMap(),
     initialVoteSessions: List<VoteSession> = emptyList(),
 ) : PickRepository {
     private val friendsData = friends.toList()
@@ -31,6 +33,7 @@ class PickMockDB(
     private val savedSelectionsData = savedSelectionsByUserId
         .mapValues { it.value.toMutableSet() }
         .toMutableMap()
+    private val reviewsByUserIdData = reviewsByUserId.mapValues { it.value.toList() }
     private val voteSessions = initialVoteSessions
         .associateBy { it.id }
         .toMutableMap()
@@ -115,6 +118,13 @@ class PickMockDB(
     override suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> {
         if (userIds.isEmpty()) return emptyMap()
         return userIds.associateWith { id -> savedSelectionsData[id].orEmpty().toSet() }
+    }
+
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> {
+        if (userIds.isEmpty()) return emptyList()
+        return userIds
+            .flatMap { id -> reviewsByUserIdData[id].orEmpty() }
+            .distinctBy { it.id }
     }
 
     override suspend fun setRestaurantSelection(userId: String, restaurantId: String, selected: Boolean) {

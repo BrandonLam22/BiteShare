@@ -49,7 +49,6 @@ class PickForMeViewModelTest {
         vm.setDistance(DistanceFilter.FIVE_KM)
         vm.setBudget(BudgetFilter.BUDGET)
         vm.setCuisine(CuisineFilter.CHINESE)
-        vm.setOpenNowOnly(true)
         vm.setMinRating(8.7)
         val context = vm.buildPickContext()
 
@@ -57,7 +56,6 @@ class PickForMeViewModelTest {
         assertEquals(DistanceFilter.FIVE_KM, context.filters.distance)
         assertEquals(BudgetFilter.BUDGET, context.filters.budget)
         assertEquals(CuisineFilter.CHINESE, context.filters.cuisine)
-        assertTrue(context.filters.openNowOnly)
         assertEquals(8.5, context.filters.minRating)
     }
 

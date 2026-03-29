@@ -8,6 +8,7 @@ import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.VoteSession
 import org.example.biteshare.domain.FriendRequest
 import org.example.biteshare.domain.FriendRequestResult
+import org.example.biteshare.domain.Review
 
 interface PickRepository {
     suspend fun friends(): List<Friend>
@@ -29,6 +30,7 @@ interface PickRepository {
     suspend fun userRestrictions(): List<String>
     suspend fun userPreferencesByUserIds(userIds: Set<String>): Map<String, List<String>> = emptyMap()
     suspend fun userRestrictionsByUserIds(userIds: Set<String>): Map<String, List<String>> = emptyMap()
+    suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> = emptyList()
     suspend fun createVoteSession(session: VoteSession) {}
     suspend fun updateVoteSessionVotes(sessionId: String, userId: String, votes: Set<String>) {}
     suspend fun voteSessionVotes(sessionId: String): Map<String, Set<String>> = emptyMap()

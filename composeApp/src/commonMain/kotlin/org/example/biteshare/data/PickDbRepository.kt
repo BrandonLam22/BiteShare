@@ -10,12 +10,15 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.FriendAddResult
 import org.example.biteshare.domain.GeoPoint
+import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.ReviewTagCatalog
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
@@ -25,6 +28,7 @@ import org.example.biteshare.domain.VoteSession
 import org.example.biteshare.domain.FriendRequest
 import org.example.biteshare.domain.FriendRequestResult
 import org.example.biteshare.domain.FriendRequestStatus
+import kotlin.random.Random
 
 class PickDbRepository(
     private val client: SupabaseClient = SupabaseClientProvider.client,
@@ -35,6 +39,7 @@ class PickDbRepository(
     private val restaurantDetailsTable = "restaurant_details"
     private val featuredItemsTable = "featured_items"
     private val userSavedRestaurantsTable = "user_saved_restaurants"
+    private val reviewsTable = "reviews"
     private val usersTable = "users"
     private val voteSessionsTable = "vote_sessions"
     private val voteParticipantsTable = "vote_session_participants"
@@ -498,6 +503,18 @@ class PickDbRepository(
             }.toMap()
         }.getOrElse { emptyMap() }
 
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> =
+        runCatching {
+            val filteredIds = userIds.filter { it.isNotBlank() }
+            if (filteredIds.isEmpty()) return@runCatching emptyList()
+            val raw = client.postgrest[reviewsTable]
+                .select(Columns.raw("*")) {
+                    filter { isIn("user_id", filteredIds) }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row -> row.toReview() }
+        }.getOrElse { emptyList() }
+
     override suspend fun createVoteSession(session: VoteSession) {
         if (session.id.isBlank()) return
         runCatching {
@@ -719,6 +736,7 @@ class PickDbRepository(
         if (id.isBlank()) return null
         val category = getString("category")
         val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
+        val reviewTagProfile = getDoubleMap("review_tag_profile")
         val dietaryFromDb = RestaurantClassification.profileFromLevels(
             vegan = getString("vegan_level"),
             vegetarian = getString("vegetarian_level"),
@@ -740,11 +758,11 @@ class PickDbRepository(
             rating = getDouble("rating"),
             isSaved = id in savedIds,
             location = getString("location", "Addis Ababa"),
-            isOpenNow = getBoolean("is_open_now", true),
             latitude = getDouble("latitude"),
             longitude = getDouble("longitude"),
             tags = tags,
             dietaryProfile = dietaryProfile,
+            reviewTagProfile = reviewTagProfile,
         )
     }
 
@@ -794,6 +812,9 @@ class PickDbRepository(
     private fun JsonObject.getDouble(key: String, fallback: Double = 0.0): Double =
         this[key]?.jsonPrimitive?.doubleOrNull ?: fallback
 
+    private fun JsonObject.getInt(key: String, fallback: Int = 0): Int =
+        this[key]?.jsonPrimitive?.intOrNull ?: fallback
+
     private fun JsonObject.getBoolean(key: String, fallback: Boolean = false): Boolean =
         this[key]?.jsonPrimitive?.booleanOrNull ?: fallback
 
@@ -811,6 +832,29 @@ class PickDbRepository(
                 element.contentOrNull?.takeIf { it.isNotBlank() }?.let { listOf(it) }.orEmpty()
             else -> emptyList()
         }
+    }
+
+    private fun JsonObject.getDoubleMap(key: String): Map<String, Double> {
+        val element = this[key] ?: return emptyMap()
+        if (element !is JsonObject) return emptyMap()
+        return element.mapNotNull { (k, v) ->
+            v.jsonPrimitive.doubleOrNull?.let { k to it }
+        }.toMap()
+    }
+
+    private fun JsonObject.toReview(): Review? {
+        val restaurantName = getString("restaurant_name")
+        if (restaurantName.isBlank()) return null
+        return Review(
+            id = getString("id", Random.nextInt(0, 1_000_000).toString()),
+            restaurantName = restaurantName,
+            tags = ReviewTagCatalog.normalizeTags(getStringList("tags")),
+            content = getString("content"),
+            rating = getInt("rating", 5),
+            userId = getString("user_id").takeIf { it.isNotBlank() },
+            username = getString("username").takeIf { it.isNotBlank() },
+            createdAt = getString("created_at").takeIf { it.isNotBlank() },
+        )
     }
 
     private suspend fun searchSignalsById(): Map<String, String> {

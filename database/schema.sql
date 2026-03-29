@@ -34,10 +34,10 @@ create table public.restaurants2 (
     eta text null,
     rating double precision null,
     location text null,
-    is_open_now boolean null,
     latitude double precision null default '0'::double precision,
     longitude double precision null default '0'::double precision,
     tags jsonb null default '[]'::jsonb,
+    review_tag_profile jsonb null default '{}'::jsonb,
     vegan_level text null default 'UNKNOWN',
     vegetarian_level text null default 'UNKNOWN',
     halal_level text null default 'UNKNOWN',
@@ -114,6 +114,20 @@ create table public.user_saved_restaurants (
     constraint user_saved_restaurants_pkey primary key (user_id, restaurant_id),
     constraint user_saved_restaurants_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants2 (id) on update CASCADE on delete CASCADE,
     constraint user_saved_restaurants_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE
+) TABLESPACE pg_default;
+
+create table public.reviews (
+    id text not null,
+    restaurant_id text null,
+    restaurant_name text not null,
+    user_id text null,
+    rating integer null default 0,
+    content text null default ''::text,
+    tags jsonb null default '[]'::jsonb,
+    created_at timestamp with time zone null default now(),
+    constraint reviews_pkey primary key (id),
+    constraint reviews_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants2 (id) on update CASCADE on delete SET null,
+    constraint reviews_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete SET null
 ) TABLESPACE pg_default;
 
 create table public.vote_sessions (

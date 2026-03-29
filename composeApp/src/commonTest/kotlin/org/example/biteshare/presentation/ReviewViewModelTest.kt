@@ -17,28 +17,28 @@ class ReviewViewModelTest {
     fun toggleTagAddsTagWhenNotSelected() {
         // Arrange
         val vm = ReviewViewModel(Model())
-        val tag = "Good Taste"
+        val tagId = "taste_good"
 
         // Act
-        vm.toggleTag(tag)
+        vm.toggleTag(tagId)
 
         // Assert
-        assertTrue(vm.selectedTags.contains(tag))
+        assertTrue(vm.selectedTags.contains(tagId))
     }
 
     @Test
     fun toggleTagRemovesTagWhenAlreadySelected() {
         // Arrange
         val vm = ReviewViewModel(Model())
-        val tag = "Economical"
-        vm.toggleTag(tag)
-        assertTrue(vm.selectedTags.contains(tag))
+        val tagId = "value_good"
+        vm.toggleTag(tagId)
+        assertTrue(vm.selectedTags.contains(tagId))
 
         // Act
-        vm.toggleTag(tag)
+        vm.toggleTag(tagId)
 
         // Assert
-        assertFalse(vm.selectedTags.contains(tag))
+        assertFalse(vm.selectedTags.contains(tagId))
     }
 
     @Test
@@ -74,11 +74,14 @@ class ReviewViewModelTest {
     fun availableTagsContainsExpectedTags() {
         // Arrange & Act
         val vm = ReviewViewModel(Model())
+        val allTags = vm.tagCategories.flatMap { it.tags }
+        val labels = allTags.map { it.label }
+        val ids = allTags.map { it.id }
 
         // Assert
-        assertTrue(vm.availableTags.contains("Good Taste"))
-        assertTrue(vm.availableTags.contains("Economical"))
-        assertTrue(vm.availableTags.isNotEmpty())
+        assertTrue("Good Taste" in labels)
+        assertTrue("value_good" in ids)
+        assertTrue(allTags.isNotEmpty())
     }
 
     @Test

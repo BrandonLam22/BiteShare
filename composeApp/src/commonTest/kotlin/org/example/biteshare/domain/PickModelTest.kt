@@ -18,6 +18,7 @@ class PickModelTest {
 
         val context = PickContext(
             mode = PickMode.ME_ONLY,
+            currentLocation = GeoPoint(43.4643, -80.5204),
             filters = PickFilters(distance = DistanceFilter.ONE_KM)
         )
 

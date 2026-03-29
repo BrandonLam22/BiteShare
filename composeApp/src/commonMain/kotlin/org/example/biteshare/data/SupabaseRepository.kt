@@ -279,6 +279,9 @@ class SupabaseRepository(
         }
     }
 
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> =
+        pickDbRepo.reviewsByUserIds(userIds)
+
     override suspend fun submitReview(review: Review) {
         val matchedRestaurant = restaurants().firstOrNull { restaurant ->
             restaurant.name.equals(review.restaurantName, ignoreCase = true)
@@ -634,6 +637,7 @@ class SupabaseRepository(
         if (id.isBlank()) return null
         val category = getString("category")
         val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
+        val reviewTagProfile = getDoubleMap("review_tag_profile")
         val dietaryFromDb = RestaurantClassification.profileFromLevels(
             vegan = getString("vegan_level"),
             vegetarian = getString("vegetarian_level"),
@@ -655,11 +659,11 @@ class SupabaseRepository(
             rating = getDouble("rating"),
             isSaved = id in savedIds,
             location = getString("location", "Addis Ababa"),
-            isOpenNow = getBoolean("is_open_now", true),
             latitude = getDouble("latitude"),
             longitude = getDouble("longitude"),
             tags = tags,
             dietaryProfile = dietaryProfile,
+            reviewTagProfile = reviewTagProfile,
         )
     }
 
@@ -745,6 +749,13 @@ class SupabaseRepository(
         (this[key] as? JsonArray)
             ?.mapNotNull { element -> (element as? JsonPrimitive)?.contentOrNull }
             ?: emptyList()
+
+    private fun JsonObject.getDoubleMap(key: String): Map<String, Double> {
+        val element = this[key] as? JsonObject ?: return emptyMap()
+        return element.mapNotNull { (k, v) ->
+            v.jsonPrimitive.doubleOrNull?.let { k to it }
+        }.toMap()
+    }
 
     private fun isDrinkCategory(category: String): Boolean {
         val key = category.lowercase()
