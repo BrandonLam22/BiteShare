@@ -98,7 +98,7 @@ class HomeView(
                         text = "Biteshare",
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontFamily = FontFamily.SansSerif,
-                            fontSize = 30.sp,
+                            fontSize = 40.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         ),

@@ -10,6 +10,7 @@ import org.example.biteshare.data.BiteShareRepository
 data class ProfileUiState(
     val name: String = "",
     val email: String = "",
+    val bio: String = "",
     val friendCount: Int = 0,
     val notificationsEnabled: Boolean = false,
     val incomingRequestCount: Int = 0,
@@ -35,6 +36,7 @@ class ProfileViewModel(
             uiState = ProfileUiState(
                 name = profileData.name,
                 email = profileData.email,
+                bio = profileData.bio,
                 friendCount = profileData.friendCount,
                 notificationsEnabled = profileData.notificationsEnabled,
                 incomingRequestCount = incomingRequests.size
