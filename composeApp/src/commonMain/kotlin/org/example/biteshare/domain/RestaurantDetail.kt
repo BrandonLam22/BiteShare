@@ -1,5 +1,7 @@
 package org.example.biteshare.domain
 
+import kotlinx.serialization.SerialName
+
 data class FeaturedItem(
     val name: String,
     val price: String,
@@ -14,6 +16,7 @@ data class RestaurantLocation(
 
 data class RestaurantDetail(
     val restaurantId: String,
+    @SerialName("restaurant_name")
     val name: String,
     val images: List<String> = emptyList(),
     val featuredItems: List<FeaturedItem> = emptyList(),

@@ -21,6 +21,7 @@ class ProfileView(
     private val onEditProfile: () -> Unit,
     private val onFriendsList: () -> Unit,
     private val onFriendRequests: () -> Unit,
+    private val onMyReviews: () -> Unit,
 ) {
 
     @Composable
@@ -121,10 +122,20 @@ class ProfileView(
             Spacer(Modifier.height(16.dp))
 
             MenuItem(
+                icon = "⭐",
+                text = "My Reviews",
+                onClick = onMyReviews
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            MenuItem(
                 icon = "👥",
                 text = "Friend Requests (${s.incomingRequestCount})",
                 onClick = onFriendRequests
             )
+
+            Spacer(Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -58,7 +58,9 @@ import org.example.biteshare.viewmodel.VoteWithFriendsViewModel
 import org.example.biteshare.location.LocationAccess
 import org.example.biteshare.location.NoopLocationAccess
 import org.example.biteshare.view.FriendRequestsView
+import org.example.biteshare.view.ReviewsListView
 import org.example.biteshare.viewmodel.FriendRequestsViewModel
+import org.example.biteshare.viewmodel.ReviewsListViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
 
@@ -86,6 +88,8 @@ private sealed class ProfileRoute {
     data object FriendsList : ProfileRoute()
     data object ChangePassword : ProfileRoute()
     data object FriendRequests : ProfileRoute()
+    data object MyReviews : ProfileRoute()
+
 }
 
 @Composable
@@ -119,6 +123,8 @@ fun AppRoot(
     val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
     val changePasswordVm = remember(repo) { ChangePasswordViewModel(repo) }
     val friendRequestsVm = remember(repo) { FriendRequestsViewModel(repo) }
+    val reviewsListVm = remember(repo) { ReviewsListViewModel(repo) }
+
 
     Scaffold(
         bottomBar = {
@@ -314,7 +320,8 @@ fun AppRoot(
                                 onLogout = {},
                                 onEditProfile = { profileRoute = ProfileRoute.EditProfile },
                                 onFriendsList = { profileRoute = ProfileRoute.FriendsList },
-                                onFriendRequests = { profileRoute = ProfileRoute.FriendRequests }
+                                onFriendRequests = { profileRoute = ProfileRoute.FriendRequests },
+                                onMyReviews = { profileRoute = ProfileRoute.MyReviews },
                             ).Content()
                         }
 
@@ -387,6 +394,15 @@ fun AppRoot(
                                 vm = helpVm,
                                 onBack = { profileRoute = ProfileRoute.Main }
                             ).Content()
+                        }
+                        ProfileRoute.MyReviews -> {
+                            val view = remember {
+                                ReviewsListView(
+                                    vm = reviewsListVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
                         }
                         ProfileRoute.ChangePassword -> {
                             ChangePasswordView(

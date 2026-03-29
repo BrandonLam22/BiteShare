@@ -7,6 +7,7 @@ import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
+import org.example.biteshare.viewmodel.FriendDetails
 
 interface BiteShareRepository : PickRepository {
 
@@ -39,4 +40,8 @@ interface BiteShareRepository : PickRepository {
     suspend fun updatePassword(newPassword: String)
 
     suspend fun verifyCurrentPassword(password: String): Boolean
+    suspend fun getUserReviews(): List<Review>
+    suspend fun deleteReview(reviewId: String)
+    suspend fun getFriendDetails(friendId: String): FriendDetails
+    suspend fun editReview(reviewId: String, newRating: Int, newComment: String)
 }

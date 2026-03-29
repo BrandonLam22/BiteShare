@@ -1,5 +1,6 @@
 package org.example.biteshare.domain
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.random.Random
 
@@ -14,6 +15,7 @@ data class User (
     val friends: List<Friend> = emptyList(),        
     val preferences: List<String> = emptyList(),
     val savedRestaurantIds: List<String> = emptyList(),
+    @SerialName("food_restrictions")
     val foodRestrictions: List<String> = emptyList(),
     val latitude: Double = 0.0,
     val longitude: Double = 0.0

@@ -27,13 +27,28 @@ import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonArray
 import org.example.biteshare.domain.UserRow
 import org.jetbrains.compose.resources.getString
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
+import org.example.biteshare.viewmodel.FriendDetails
+import org.example.biteshare.viewmodel.FriendReview
+import kotlin.collections.map
 import kotlin.random.Random
 
+@Serializable
+data class UserSavedRestaurant(
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("restaurant_id")
+    val restaurantId: String
+)
 class SupabaseRepository(
     private val model: Model,
     private val client: SupabaseClient = SupabaseClientProvider.client,
@@ -755,4 +770,129 @@ class SupabaseRepository(
 
     private fun normalizeCategoryId(category: String): String =
         category.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
+
+
+    override suspend fun getUserReviews(): List<Review> {
+        return withContext(Dispatchers.Default) {
+            try {
+                val userId = model.currentUser?.id ?: return@withContext emptyList()
+
+                client
+                    .from(reviewsTable)
+                    .select {
+                        filter {
+                            eq("user_id", userId)
+                        }
+                    }
+                    .decodeList<Review>()   // 👈 direct decode
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                fallback.getUserReviews()
+            }
+        }
+    }
+    override suspend fun deleteReview(reviewId: String) {
+        try {
+            client
+                .from(reviewsTable)
+                .delete {
+                    filter {
+                        eq("id", reviewId)
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            fallback.deleteReview(reviewId)
+        }
+    }
+
+    override suspend fun editReview(
+        reviewId: String,
+        newRating: Int,
+        newComment: String
+    ) {
+        try {
+            client
+                .from(reviewsTable)
+                .update(
+                    mapOf(
+                        "rating" to newRating,
+                        "content" to newComment
+                    )
+                ) {
+                    filter {
+                        eq("id", reviewId)
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            fallback.editReview(reviewId, newRating, newComment)
+        }
+    }
+    override suspend fun getFriendDetails(friendId: String): FriendDetails {
+        return try {
+            // ✅ safer: don't decode full User
+            val userJson = client.from(usersTable)
+                .select {
+                    filter { eq("id", friendId) }
+                    limit(1)
+                }
+                .decodeSingle<JsonObject>()
+
+            val username = userJson["username"]?.jsonPrimitive?.content ?: "Unknown"
+
+            val preferences = userJson["preferences"]
+                ?.jsonArray
+                ?.map { it.jsonPrimitive.content }
+                ?.takeIf { it.isNotEmpty() }
+                ?: listOf("None")
+
+            val restrictions = userJson["food_restrictions"]
+                ?.jsonArray
+                ?.map { it.jsonPrimitive.content }
+                ?.takeIf { it.isNotEmpty() }
+                ?: listOf("None")
+            val reviews = client.from(reviewsTable)
+                .select {
+                    filter { eq("user_id", friendId) }
+                    limit(5)
+                }
+                .decodeList<Review>()
+            println(reviews)
+
+            val savedRestaurants = client.from(userSavedRestaurantsTable)
+                .select {
+                    filter { eq("user_id", friendId) }
+                }
+                .decodeList<UserSavedRestaurant>()
+
+            val savedRestaurantNames = savedRestaurants.mapNotNull { saved ->
+                getRestaurantById(saved.restaurantId)?.name
+            }
+
+            FriendDetails(
+                name = username,
+                preferences = preferences as List<String>,
+                restrictions = restrictions as List<String>,
+                reviews = reviews.map {
+                    FriendReview(
+                        restaurantName = it.restaurantName,
+                        rating = it.rating.toDouble(),
+                        comment = it.content
+                    )
+                },
+                savedRestaurants = savedRestaurantNames
+            )
+
+
+        } catch (e: Exception) {
+            println("Supabase getFriendDetails failed: ${e.message}")
+            fallback.getFriendDetails(friendId)
+        }
+
+    }
 }

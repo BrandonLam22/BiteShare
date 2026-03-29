@@ -18,6 +18,8 @@ import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteSession
 import org.example.biteshare.domain.Review
 import org.example.biteshare.domain.User
+import org.example.biteshare.viewmodel.FriendDetails
+import org.example.biteshare.viewmodel.FriendReview
 
 class FakeRepository(
     private val model: Model = Model(),
@@ -480,4 +482,57 @@ class FakeRepository(
             else -> 3
         }
     }
+    override suspend fun getUserReviews(): List<Review> {
+        return model.getReviewsForUser()
+    }
+
+    override suspend fun deleteReview(reviewId: String) {
+        model.removeReview(reviewId)
+    }
+
+    override suspend fun editReview(reviewId: String, newRating: Int, newComment: String) {
+        model.editReview(reviewId, newRating, newComment)
+    }
+
+    fun getUserById(id: String): User? {
+        return when {
+            model.currentUser?.id == id -> model.currentUser
+            else -> MockDB.fakeUsers.find { it.id == id }
+        }
+    }
+
+    override suspend fun getFriendDetails(friendId: String): FriendDetails {
+        // Find the friend in the users list
+        val friend = getUserById(friendId)
+
+        return if (friend != null) {
+            FriendDetails(
+                name = friend.username,
+                preferences = friend.preferences,
+                restrictions = friend.foodRestrictions,
+                reviews = model.getReviewsForUser()
+                    .filter { it.userId == friendId }
+                    .map {
+                        FriendReview(
+                            restaurantName = it.restaurantName,
+                            rating = it.rating.toDouble(),
+                            comment = it.content
+                        )
+                    },
+                savedRestaurants = friend.savedRestaurantIds
+                    .mapNotNull { restaurantId ->
+                        getRestaurantById(restaurantId)?.name
+                    }
+            )
+        } else {
+            FriendDetails(
+                name = "Unknown",
+                preferences = emptyList(),
+                restrictions = emptyList(),
+                reviews = emptyList(),
+                savedRestaurants = emptyList()
+            )
+        }
+    }
+
 }
