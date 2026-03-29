@@ -31,6 +31,7 @@ import org.example.biteshare.domain.UserRow
 import org.jetbrains.compose.resources.getString
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.ReviewTagCatalog
 import org.example.biteshare.domain.User
 import kotlin.random.Random
 
@@ -644,7 +645,7 @@ class SupabaseRepository(
         return Review(
             id = getString("id", Random.nextInt(0, 1_000_000).toString()),
             restaurantName = restaurantName,
-            tags = getStringList("tags"),
+            tags = ReviewTagCatalog.normalizeTags(getStringList("tags")),
             content = getString("content"),
             rating = getInt("rating", 5),
             userId = getString("user_id").takeIf { it.isNotBlank() },

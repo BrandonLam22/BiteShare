@@ -125,126 +125,126 @@ object MockDB {
         Review(
             id = "r1",
             restaurantName = "Joe's Pizza",
-            tags = listOf("Pizza", "Late Night"),
+            tags = listOf("taste_good", "texture_crispy"),
             content = "Great crust and very generous toppings.",
             rating = 9
         ),
         Review(
             id = "r2",
             restaurantName = "Ken Sushi House",
-            tags = listOf("Fresh", "Seafood"),
+            tags = listOf("quality_fresh", "taste_good"),
             content = "Good sashimi quality for student budget.",
             rating = 8
         ),
         Review(
             id = "r3",
             restaurantName = "Mel's Diner",
-            tags = listOf("Burgers", "Comfort Food"),
+            tags = listOf("service_fast", "taste_good"),
             content = "Classic diner burgers and quick service.",
             rating = 8
         ),
         Review(
             id = "r4",
             restaurantName = "Williams Fresh Cafe",
-            tags = listOf("Coffee", "Study Spot"),
+            tags = listOf("ambience_cozy", "taste_good"),
             content = "Nice place to study with reliable coffee.",
             rating = 9
         ),
         Review(
             id = "r5",
             restaurantName = "Hope Café",
-            tags = listOf("Coffee", "Affordable"),
+            tags = listOf("value_good"),
             content = "Budget coffee with consistent quality.",
             rating = 9
         ),
         Review(
             id = "r6",
             restaurantName = "Lazeez Shawarma",
-            tags = listOf("Spicy", "Fast"),
+            tags = listOf("service_fast", "portion_large"),
             content = "Fast and filling after evening classes.",
             rating = 8
         ),
         Review(
             id = "r7",
             restaurantName = "iPotato",
-            tags = listOf("Fast Food", "Affordable"),
+            tags = listOf("value_good", "portion_large"),
             content = "Good value and lots of topping choices.",
             rating = 7
         ),
         Review(
             id = "r8",
             restaurantName = "The Alley Waterloo",
-            tags = listOf("Bubble Tea", "Sweet"),
+            tags = listOf("taste_sweet", "taste_good"),
             content = "The brown sugar milk tea is consistently good.",
             rating = 9
         ),
         Review(
             id = "r9",
             restaurantName = "Gol's Lanzhou Noodle",
-            tags = listOf("Noodles", "Hand Pulled"),
+            tags = listOf("taste_good"),
             content = "Hand-pulled noodles are chewy and flavorful.",
             rating = 9
         ),
         Review(
             id = "r10",
             restaurantName = "Pasta Palace",
-            tags = listOf("Italian", "Group Friendly"),
+            tags = listOf("portion_large"),
             content = "Great portion sizes for sharing.",
             rating = 8
         ),
         Review(
             id = "r11",
             restaurantName = "Pizza Plaza",
-            tags = listOf("Pizza", "Takeout"),
+            tags = listOf("value_good"),
             content = "Reliable takeout and good lunch specials.",
             rating = 8
         ),
         Review(
             id = "r12",
             restaurantName = "Pizza Palace",
-            tags = listOf("Pizza", "Cheesy"),
+            tags = listOf("taste_good"),
             content = "Great cheesy slices near campus.",
             rating = 8
         ),
         Review(
             id = "r13",
             restaurantName = "Campus Pizza",
-            tags = listOf("Budget Friendly", "Quick Bite"),
+            tags = listOf("service_fast"),
             content = "Solid quick bite near campus.",
             rating = 7
         ),
         Review(
             id = "r14",
             restaurantName = "Shawerma Plus",
-            tags = listOf("Middle Eastern", "Late Night"),
+            tags = listOf("portion_large"),
             content = "Open late and portions are huge.",
             rating = 8
         ),
         Review(
             id = "r15",
             restaurantName = "Bao Sandwich Bar",
-            tags = listOf("Fusion", "Creative"),
+            tags = listOf("quality_fresh", "taste_good"),
             content = "Interesting flavors and very fresh buns.",
             rating = 8
         ),
         Review(
             id = "r16",
             restaurantName = "The Cactus Board Game Cafe",
-            tags = listOf("Cafe", "Group"),
+            tags = listOf("ambience_cozy"),
             content = "Fun spot for board games and drinks.",
             rating = 9
         ),
         Review(
             id = "r17",
             restaurantName = "Aunty's Kitchen",
-            tags = listOf("Indian", "Rich Flavor"),
+            tags = listOf("taste_good", "service_friendly"),
             content = "Very flavorful curry and friendly staff.",
             rating = 9
         ),
         Review(
             id = "r18",
             restaurantName = "Kabob Hut Waterloo",
-            tags = listOf("Grill", "Protein"),
+            tags = listOf("quality_fresh", "taste_good"),
             content = "Fresh grilled skewers and great garlic sauce.",
             rating = 8
         )

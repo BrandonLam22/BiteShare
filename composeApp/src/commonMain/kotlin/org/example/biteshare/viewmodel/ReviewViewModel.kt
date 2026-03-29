@@ -10,6 +10,7 @@ import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.ReviewTagCatalog
 import kotlin.time.Clock
 
 class ReviewViewModel(
@@ -36,11 +37,9 @@ class ReviewViewModel(
         private set
     var reviewText by mutableStateOf("")
     var rating by mutableStateOf(5)  // 1-10, default 5
-    // We use mutableStateListOf for the tags fo the UI observes additions/removals
+    // We use mutableStateListOf for the tags so the UI observes additions/removals
     val selectedTags = mutableStateListOf<String>()
-    val availableTags = listOf("I hate it!", "Wait long", "Economical",
-        "Too Spicy", "Good Taste", "Expensive",
-        "Come Back", "Too Salty", "Raw")
+    val tagCategories = ReviewTagCatalog.categories
 
     val restaurantName: String
         get() = selectedRestaurantName.orEmpty()
@@ -164,7 +163,7 @@ class ReviewViewModel(
 
         val newReview = Review(
             restaurantName = chosenRestaurant,
-            tags = this.selectedTags.toList(),
+            tags = ReviewTagCatalog.normalizeTags(this.selectedTags.toList()),
             content = this.reviewText,
             rating = this.rating,
             userId = model.currentUser?.id,

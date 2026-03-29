@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
+import org.example.biteshare.domain.ReviewTagCatalog
 import org.example.biteshare.viewmodel.DetailViewModel
 import org.example.biteshare.viewmodel.MealTab
 import org.jetbrains.compose.resources.DrawableResource
@@ -495,7 +496,7 @@ class DetailView(
                                             review.tags.forEach { tag ->
                                                 AssistChip(
                                                     onClick = {},
-                                                    label = { Text(tag) }
+                                                    label = { Text(ReviewTagCatalog.labelFor(tag)) }
                                                 )
                                             }
                                         }

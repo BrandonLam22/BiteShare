@@ -1,11 +1,14 @@
 package org.example.biteshare.view
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.biteshare.components.LoginSignupButton
 import org.example.biteshare.domain.Model
+import org.example.biteshare.domain.ReviewTag
+import org.example.biteshare.domain.ReviewTagCategory
 import org.example.biteshare.viewmodel.ReviewViewModel
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -101,20 +106,21 @@ fun ReviewView(viewModel: ReviewViewModel = ReviewViewModel(Model())) {
 
         // SECTION 3: TAG SELECTION
         Text(
-            text = "Some frequently used tags",
+            text = "Pick Tags by Category",
             fontSize = 18.sp,
             color = Color(0xFFFF7A00),
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .align(Alignment.Start)
-                .padding(start = 20.dp, bottom = 8.dp)
+                .padding(start = 20.dp, bottom = 10.dp)
         )
 
         // We use a FlowRow or simple Row/Column for the tags
-        TagGrid(
-            tags = viewModel.availableTags,
+        TagCategoryList(
+            categories = viewModel.tagCategories,
             selectedTags = viewModel.selectedTags,
-            onTagClick = { tag ->
-                viewModel.toggleTag(tag) // expresses intention to ViewModel
+            onTagClick = { tagId ->
+                viewModel.toggleTag(tagId) // expresses intention to ViewModel
             }
         )
 
@@ -328,8 +334,64 @@ private fun SuggestionItem(
 }
 
 @Composable
+fun TagCategoryList(
+    categories: List<ReviewTagCategory>,
+    selectedTags: List<String>,
+    onTagClick: (String) -> Unit
+) {
+    val cardBackground = Color(0xFFFFF7F0)
+    val accent = Color(0xFFFF7A00)
+    val titleColor = Color(0xFFB85C00)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+    ) {
+        categories.forEach { category ->
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = cardBackground,
+                shadowElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(accent, RoundedCornerShape(4.dp))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = category.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = titleColor,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    TagGrid(
+                        tags = category.tags,
+                        selectedTags = selectedTags,
+                        onTagClick = onTagClick
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun TagGrid(
-    tags: List<String>,
+    tags: List<ReviewTag>,
     selectedTags: List<String>,
     onTagClick: (String) -> Unit
 ) {
@@ -337,16 +399,16 @@ fun TagGrid(
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Center, // Centers the cluster of tags
+            .padding(horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        maxItemsInEachRow = 3
+        maxItemsInEachRow = 4
     ) {
         tags.forEach { tag ->
             TagItem(
-                tag = tag,
-                isSelected = selectedTags.contains(tag),
-                onClick = { onTagClick(tag)}
+                tag = tag.label,
+                isSelected = selectedTags.contains(tag.id),
+                onClick = { onTagClick(tag.id) }
             )
         }
     }
@@ -358,21 +420,25 @@ fun TagItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val selectedColor = Color(0xFFFF7A00)
+    val selectedText = Color.White
+    val unselectedText = Color(0xFF6B3E00)
+    val unselectedBorder = Color(0xFFFFD7B3)
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        // Orange if selected, light gray if not
-        color = if (isSelected) Color(0xFFFF7A00) else Color(0xFFF1F1F1),
-        modifier = Modifier
-            .padding(horizontal = 4.dp)
+        color = if (isSelected) selectedColor else Color.White,
+        border = if (isSelected) null else BorderStroke(1.dp, unselectedBorder),
+        shadowElevation = if (isSelected) 2.dp else 0.dp,
+        modifier = Modifier.defaultMinSize(minHeight = 32.dp)
     ) {
         Text(
             text = tag,
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            color = if (isSelected) Color.White else Color.Black,
-            fontSize = 14.sp
+                .padding(horizontal = 14.dp, vertical = 7.dp),
+            color = if (isSelected) selectedText else unselectedText,
+            fontSize = 13.sp
         )
     }
 }
-
