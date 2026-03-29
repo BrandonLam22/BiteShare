@@ -39,6 +39,9 @@ class PickForMeViewModelTest {
         vm.setMode(PickMode.ME_ONLY)
 
         assertTrue(vm.uiState.selectedFriendIds.isEmpty())
+
+        advanceTimeBy(300)
+        advanceUntilIdle()
     }
 
     @Test
@@ -57,6 +60,9 @@ class PickForMeViewModelTest {
         assertEquals(BudgetFilter.BUDGET, context.filters.budget)
         assertEquals(CuisineFilter.CHINESE, context.filters.cuisine)
         assertEquals(8.5, context.filters.minRating)
+
+        advanceTimeBy(300)
+        advanceUntilIdle()
     }
 
     @Test
@@ -68,5 +74,8 @@ class PickForMeViewModelTest {
 
         vm.toggleFriend("sally")
         assertFalse(vm.uiState.selectedFriendIds.contains("sally"))
+
+        advanceTimeBy(300)
+        advanceUntilIdle()
     }
 }
