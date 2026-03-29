@@ -25,6 +25,8 @@ import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.example.biteshare.domain.UserRow
 import org.jetbrains.compose.resources.getString
 import org.example.biteshare.domain.RestaurantLocation
@@ -689,4 +691,65 @@ class SupabaseRepository(
 
     private fun normalizeCategoryId(category: String): String =
         category.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
+    override suspend fun getUserReviews(): List<Review> {
+        return withContext(Dispatchers.Default) {
+            try {
+                val userId = model.currentUser?.id ?: return@withContext emptyList()
+
+                client
+                    .from(reviewsTable)
+                    .select {
+                        filter {
+                            eq("user_id", userId)
+                        }
+                    }
+                    .decodeList<Review>()   // 👈 direct decode
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                fallback.getUserReviews()
+            }
+        }
+    }
+    override suspend fun deleteReview(reviewId: String) {
+        try {
+            client
+                .from(reviewsTable)
+                .delete {
+                    filter {
+                        eq("id", reviewId)
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            fallback.deleteReview(reviewId)
+        }
+    }
+
+    override suspend fun editReview(
+        reviewId: String,
+        newRating: Int,
+        newComment: String
+    ) {
+        try {
+            client
+                .from(reviewsTable)
+                .update(
+                    mapOf(
+                        "rating" to newRating,
+                        "content" to newComment
+                    )
+                ) {
+                    filter {
+                        eq("id", reviewId)
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            fallback.editReview(reviewId, newRating, newComment)
+        }
+    }
 }

@@ -454,4 +454,16 @@ class FakeRepository(
             else -> 3
         }
     }
+
+    override suspend fun getUserReviews(): List<Review> {
+        return model.getReviewsForUser()
+    }
+
+    override suspend fun deleteReview(reviewId: String) {
+        model.removeReview(reviewId)
+    }
+
+    override suspend fun editReview(reviewId: String, newRating: Int, newComment: String) {
+        model.editReview(reviewId, newRating, newComment)
+    }
 }

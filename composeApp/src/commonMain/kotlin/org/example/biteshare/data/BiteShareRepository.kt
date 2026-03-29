@@ -39,4 +39,8 @@ interface BiteShareRepository : PickRepository {
     suspend fun updatePassword(newPassword: String)
 
     suspend fun verifyCurrentPassword(password: String): Boolean
+
+    suspend fun getUserReviews(): List<Review>
+    suspend fun deleteReview(reviewId: String)
+    suspend fun editReview(reviewId: String, newRating: Int, newComment: String)
 }

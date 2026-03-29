@@ -20,6 +20,7 @@ class ProfileView(
     private val onLogout: () -> Unit,
     private val onEditProfile: () -> Unit,
     private val onFriendsList: () -> Unit,
+    private val onMyReviews: () -> Unit,
 ) {
 
     @Composable

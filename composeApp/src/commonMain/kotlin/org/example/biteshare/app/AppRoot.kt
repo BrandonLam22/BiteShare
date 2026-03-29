@@ -35,6 +35,7 @@ import org.example.biteshare.view.PrivacyView
 import org.example.biteshare.view.ProfileView
 import org.example.biteshare.view.RecommendsView
 import org.example.biteshare.view.ReviewView
+import org.example.biteshare.view.ReviewsListView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.VoteHistoryDetailView
 import org.example.biteshare.view.VoteHistoryView
@@ -51,6 +52,7 @@ import org.example.biteshare.viewmodel.PrivacyViewModel
 import org.example.biteshare.viewmodel.ProfileViewModel
 import org.example.biteshare.viewmodel.RecommendsViewModel
 import org.example.biteshare.viewmodel.ReviewViewModel
+import org.example.biteshare.viewmodel.ReviewsListViewModel
 import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.VoteHistoryDetailViewModel
 import org.example.biteshare.viewmodel.VoteHistoryViewModel
@@ -82,6 +84,7 @@ private sealed class ProfileRoute {
     data object FriendsList : ProfileRoute()
 
     data object ChangePassword : ProfileRoute()
+    data object MyReviews : ProfileRoute()
 }
 
 @Composable
@@ -111,6 +114,7 @@ fun AppRoot(model: Model) {
     val reviewVm = remember(model, repo) { ReviewViewModel(model, repo) }
     val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
     val changePasswordVm = remember(repo) { ChangePasswordViewModel(repo) }
+    val reviewsListVm = remember(repo) { ReviewsListViewModel(repo) }
 
     Scaffold(
         bottomBar = {
@@ -300,11 +304,13 @@ fun AppRoot(model: Model) {
                             ProfileView(
                                 vm = profileVm,
                                 onSavedRestaurants = { profileRoute = ProfileRoute.Saved },
+                                onMyReviews = { profileRoute = ProfileRoute.MyReviews },
                                 onPrivacy = { profileRoute = ProfileRoute.Privacy },
                                 onHelp = { profileRoute = ProfileRoute.Help },
                                 onLogout = {},
                                 onEditProfile = { profileRoute = ProfileRoute.EditProfile },
-                                onFriendsList = { profileRoute = ProfileRoute.FriendsList }
+                                onFriendsList = { profileRoute = ProfileRoute.FriendsList },
+
                             ).Content()
                         }
 
@@ -366,6 +372,15 @@ fun AppRoot(model: Model) {
                                 vm = changePasswordVm,
                                 onBack = { profileRoute = ProfileRoute.EditProfile }
                             ).Content()
+                        }
+                        ProfileRoute.MyReviews -> {
+                            val view = remember {
+                                ReviewsListView(
+                                    vm = reviewsListVm,
+                                    onBack = { profileRoute = ProfileRoute.Main }
+                                )
+                            }
+                            view.Content()
                         }
                     }
                 }

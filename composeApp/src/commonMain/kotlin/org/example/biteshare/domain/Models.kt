@@ -594,5 +594,28 @@ class Model {
         currentUser = user
     }
 
+    /**
+     * Gets all reviews for the current user
+     */
+    fun getReviewsForUser(): List<Review> {
+        val user = currentUser ?: return emptyList()
+        return _reviews.filter { it.userId == user.id }
+    }
+
+    /**
+     * Edits an existing review
+     */
+    fun editReview(reviewId: String, newRating: Int, newComment: String) {
+        val index = _reviews.indexOfFirst { it.id == reviewId }
+        if (index != -1) {
+            val oldReview = _reviews[index]
+            val updatedReview = oldReview.copy(
+                rating = newRating,
+                content = newComment
+            )
+            _reviews[index] = updatedReview
+        }
+    }
+
 
 }
