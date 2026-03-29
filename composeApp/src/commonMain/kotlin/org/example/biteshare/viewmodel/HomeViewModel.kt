@@ -10,6 +10,7 @@ import org.example.biteshare.data.PickRepository
 import org.example.biteshare.domain.CategoryItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.FriendAddResult
+import org.example.biteshare.domain.FriendRequestResult
 import org.example.biteshare.domain.PopularItem
 
 enum class HomeSearchMode(val label: String) {
@@ -30,6 +31,7 @@ data class HomeUiState(
     val isFriendActionLoading: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val outgoingRequestUserIds: Set<String> = emptySet(),
 )
 
 class HomeViewModel(
@@ -100,6 +102,8 @@ class HomeViewModel(
     fun searchFriends() {
         scope.launch {
             refreshFriendIds()
+            refreshOutgoingRequestIds()
+
             val query = uiState.searchQuery.trim()
             if (query.isBlank()) {
                 uiState = uiState.copy(
@@ -139,18 +143,20 @@ class HomeViewModel(
                     }
                 )
             } else {
-                val result = pickRepo.addFriend(friendId)
+                val result = pickRepo.sendFriendRequest(friendId)
                 refreshFriendIds()
+                refreshOutgoingRequestIds()
                 refreshFriendSearchResults()
                 uiState = uiState.copy(
                     isFriendActionLoading = false,
                     friendActionMessage = when (result) {
-                        FriendAddResult.SUCCESS -> "${friend.name} was added to your friends."
-                        FriendAddResult.EMPTY_INPUT -> "Please enter a name or user id."
-                        FriendAddResult.SELF_NOT_ALLOWED -> "You cannot add yourself."
-                        FriendAddResult.ALREADY_FRIENDS -> "${friend.name} is already in your friends list."
-                        FriendAddResult.NOT_FOUND -> "That user could not be found."
-                        FriendAddResult.ERROR -> "Unable to add ${friend.name} right now."
+                        FriendRequestResult.REQUEST_SENT -> "Friend request sent to ${friend.name}."
+                        FriendRequestResult.EMPTY_INPUT -> "Please enter a name or user id."
+                        FriendRequestResult.SELF_NOT_ALLOWED -> "You cannot add yourself."
+                        FriendRequestResult.ALREADY_FRIENDS -> "${friend.name} is already in your friends list."
+                        FriendRequestResult.ALREADY_PENDING -> "A friend request is already pending with ${friend.name}."
+                        FriendRequestResult.NOT_FOUND -> "That user could not be found."
+                        FriendRequestResult.ERROR -> "Unable to send request to ${friend.name} right now."
                     }
                 )
             }
@@ -169,4 +175,13 @@ class HomeViewModel(
         }
         uiState = uiState.copy(friendSearchResults = pickRepo.searchUsers(query))
     }
+
+    private suspend fun refreshOutgoingRequestIds() {
+        uiState = uiState.copy(
+            outgoingRequestUserIds = pickRepo.outgoingFriendRequests()
+                .map { it.receiverId }
+                .toSet()
+        )
+    }
+
 }

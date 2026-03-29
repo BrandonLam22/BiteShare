@@ -155,3 +155,34 @@ create table public.vote_session_votes (
     constraint vote_session_votes_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE,
     constraint vote_session_votes_restaurant_id_fkey foreign KEY (restaurant_id) references restaurants2 (id) on update CASCADE on delete CASCADE
 ) TABLESPACE pg_default;
+
+create table public.friend_requests (
+    id uuid not null default gen_random_uuid (),
+    sender_id text not null,
+    receiver_id text not null,
+    status text not null default 'pending'::text,
+    created_at timestamp with time zone not null default now(),
+    updated_at timestamp with time zone not null default now(),
+    constraint friend_requests_pkey primary key (id),
+    constraint friend_requests_receiver_id_fkey foreign KEY (receiver_id) references users (id) on delete CASCADE,
+    constraint friend_requests_sender_id_fkey foreign KEY (sender_id) references users (id) on delete CASCADE,
+    constraint friend_requests_no_self_request_check check ((sender_id <> receiver_id)),
+    constraint friend_requests_status_check check (
+        (
+            status = any (
+                array[
+                    'pending'::text,
+                    'accepted'::text,
+                    'rejected'::text
+                ]
+            )
+        )
+    )
+) TABLESPACE pg_default;
+
+create unique INDEX IF not exists friend_requests_one_pending_pair_idx on public.friend_requests using btree (
+    LEAST(sender_id, receiver_id),
+    GREATEST(sender_id, receiver_id)
+    ) TABLESPACE pg_default
+    where
+    (status = 'pending'::text);

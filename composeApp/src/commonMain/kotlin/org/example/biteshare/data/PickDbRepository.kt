@@ -22,6 +22,9 @@ import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteParticipant
 import org.example.biteshare.domain.VoteSession
+import org.example.biteshare.domain.FriendRequest
+import org.example.biteshare.domain.FriendRequestResult
+import org.example.biteshare.domain.FriendRequestStatus
 
 class PickDbRepository(
     private val client: SupabaseClient = SupabaseClientProvider.client,
@@ -39,17 +42,18 @@ class PickDbRepository(
     private val voteSessionVotesTable = "vote_session_votes"
     private val defaultUserId = "demo_user"
     private var searchSignalCache: Map<String, String>? = null
+    private val friendRequestsTable = "friend_requests"
 
     override suspend fun friends(): List<Friend> =
         runCatching {
             val userId = effectiveUserId()
             val raw = client.postgrest[friendsTable]
-                .select(Columns.raw("id, user_id, name")) {
+                .select(Columns.raw("friend_id, user_id, name")) {
                     filter { eq("user_id", userId) }
                 }
                 .decodeList<JsonObject>()
             raw.mapNotNull { row ->
-                val id = row.getString("id")
+                val id = row.getString("friend_id")
                 if (id.isBlank()) return@mapNotNull null
                 val name = row.getString("name").ifBlank { id }
                 Friend(id = id, name = name)
@@ -106,8 +110,8 @@ class PickDbRepository(
 
             client.postgrest[friendsTable].insert(
                 buildJsonObject {
-                    put("id", normalizedId)
                     put("user_id", userId)
+                    put("friend_id", normalizedId)
                     put("name", userRow.getString("username").ifBlank { normalizedId })
                 }
             )
@@ -123,17 +127,280 @@ class PickDbRepository(
             if (normalizedId.isBlank()) return@runCatching false
 
             val userId = effectiveUserId()
+
             client.postgrest[friendsTable].delete {
                 filter {
                     eq("user_id", userId)
-                    eq("id", normalizedId)
+                    eq("friend_id", normalizedId)
                 }
             }
+
+            client.postgrest[friendsTable].delete {
+                filter {
+                    eq("user_id", normalizedId)
+                    eq("friend_id", userId)
+                }
+            }
+
             true
         }.getOrElse { throwable ->
             println("removeFriend error: ${throwable.message}")
             false
         }
+
+    // FRIEND REQUEST
+    // HELPER FUNCTION
+    private fun JsonObject.toFriendRequest(
+        senderName: String,
+        receiverName: String = "",
+    ): FriendRequest {
+        return FriendRequest(
+            id = getString("id"),
+            senderId = getString("sender_id"),
+            senderName = senderName,
+            receiverId = getString("receiver_id"),
+            receiverName = receiverName,
+            status = when (getString("status").lowercase()) {
+                "accepted" -> FriendRequestStatus.ACCEPTED
+                "rejected" -> FriendRequestStatus.REJECTED
+                else -> FriendRequestStatus.PENDING
+            }
+        )
+    }
+    // HELPER FUNCTION
+    private suspend fun getUsernameById(userId: String): String {
+        if (userId.isBlank()) return ""
+        return client.postgrest[usersTable]
+            .select(Columns.raw("username")) {
+                filter { eq("id", userId) }
+                limit(1)
+            }
+            .decodeList<JsonObject>()
+            .firstOrNull()
+            ?.getString("username")
+            .orEmpty()
+    }
+
+    override suspend fun sendFriendRequest(targetUserId: String): FriendRequestResult =
+        runCatching {
+            // reject blank input
+            val normalizedId = targetUserId.trim()
+            if (normalizedId.isBlank()) return@runCatching FriendRequestResult.EMPTY_INPUT
+
+            // reject self-request
+            val userId = effectiveUserId()
+            if (normalizedId == userId) return@runCatching FriendRequestResult.SELF_NOT_ALLOWED
+
+            // reject if already friends
+            val existingFriendIds = friends().map { it.id }.toSet()
+            if (normalizedId in existingFriendIds) return@runCatching FriendRequestResult.ALREADY_FRIENDS
+
+            val userRow = client.postgrest[usersTable]
+                .select(Columns.raw("id, username")) {
+                    filter { eq("id", normalizedId) }
+                    limit(1)
+                }
+                .decodeList<JsonObject>()
+                .firstOrNull()
+                ?: return@runCatching FriendRequestResult.NOT_FOUND
+
+            val pendingRequests = client.postgrest[friendRequestsTable]
+                .select(Columns.raw("id")) {
+                    filter {
+                        eq("status", "pending")
+                        or {
+                            and {
+                                eq("sender_id", userId)
+                                eq("receiver_id", normalizedId)
+                            }
+                            and {
+                                eq("sender_id", normalizedId)
+                                eq("receiver_id", userId)
+                            }
+                        }
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            if (pendingRequests.isNotEmpty()) {
+                return@runCatching FriendRequestResult.ALREADY_PENDING
+            }
+
+            client.postgrest[friendRequestsTable].insert(
+                buildJsonObject {
+                    put("sender_id", userId)
+                    put("receiver_id", normalizedId)
+                    put("status", "pending")
+                }
+            )
+            FriendRequestResult.REQUEST_SENT
+        }.getOrElse { throwable ->
+            println("sendFriendRequest error: ${throwable.message}")
+            FriendRequestResult.ERROR
+        }
+
+    // return requests sent to the current user and still pending.
+    override suspend fun incomingFriendRequests(): List<FriendRequest> =
+        runCatching {
+            val userId = effectiveUserId()
+            val raw = client.postgrest[friendRequestsTable]
+                .select(Columns.raw("id, sender_id, receiver_id, status")) {
+                    filter {
+                        eq("receiver_id", userId)
+                        eq("status", "pending")
+                    }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row ->
+                val id = row.getString("id")
+                val senderId = row.getString("sender_id")
+                val receiverId = row.getString("receiver_id")
+                val statusRaw = row.getString("status")
+                if (id.isBlank() || senderId.isBlank() || receiverId.isBlank()) return@mapNotNull null
+                FriendRequest(
+                    id = id,
+                    senderId = senderId,
+                    senderName = getUsernameById(senderId),
+                    receiverId = receiverId,
+                    receiverName = "",
+                    status = when (statusRaw.lowercase()) {
+                        "accepted" -> FriendRequestStatus.ACCEPTED
+                        "rejected" -> FriendRequestStatus.REJECTED
+                        else -> FriendRequestStatus.PENDING
+                    }
+                )
+            }
+        }.getOrElse { throwable ->
+            println("incomingFriendRequests error: ${throwable.message}")
+            emptyList()
+        }
+
+    override suspend fun outgoingFriendRequests(): List<FriendRequest> =
+        runCatching {
+            val userId = effectiveUserId()
+            val raw = client.postgrest[friendRequestsTable]
+                .select(Columns.raw("id, sender_id, receiver_id, status")) {
+                    filter {
+                        eq("sender_id", userId)
+                        eq("status", "pending")
+                    }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row ->
+                val id = row.getString("id")
+                val senderId = row.getString("sender_id")
+                val receiverId = row.getString("receiver_id")
+                val statusRaw = row.getString("status")
+                if (id.isBlank() || senderId.isBlank() || receiverId.isBlank()) return@mapNotNull null
+                FriendRequest(
+                    id = id,
+                    senderId = senderId,
+                    senderName = getUsernameById(senderId),
+                    receiverId = receiverId,
+                    receiverName = getUsernameById(receiverId),
+                    status = when (statusRaw.lowercase()) {
+                        "accepted" -> FriendRequestStatus.ACCEPTED
+                        "rejected" -> FriendRequestStatus.REJECTED
+                        else -> FriendRequestStatus.PENDING
+                    }
+                )
+            }
+        }.getOrElse { throwable ->
+            println("outgoingFriendRequests error: ${throwable.message}")
+            emptyList()
+        }
+
+    override suspend fun acceptFriendRequest(requestId: String): Boolean =
+        runCatching {
+            val normalizedId = requestId.trim()
+            if (normalizedId.isBlank()) return@runCatching false
+
+            val currentUserId = effectiveUserId()
+
+            val requestRow = client.postgrest[friendRequestsTable]
+                .select(Columns.raw("id, sender_id, receiver_id, status")) {
+                    filter { eq("id", normalizedId) }
+                    limit(1)
+                }
+                .decodeList<JsonObject>()
+                .firstOrNull()
+                ?: return@runCatching false
+
+            val senderId = requestRow.getString("sender_id")
+            val receiverId = requestRow.getString("receiver_id")
+            val status = requestRow.getString("status")
+
+            if (senderId.isBlank() || receiverId.isBlank()) return@runCatching false
+            if (receiverId != currentUserId) return@runCatching false
+            if (status.lowercase() != "pending") return@runCatching false
+
+            val senderName = getUsernameById(senderId).ifBlank { senderId }
+            val receiverName = getUsernameById(receiverId).ifBlank { receiverId }
+
+            client.postgrest[friendsTable].upsert(
+                body = JsonArray(
+                    listOf(
+                        buildJsonObject {
+                            put("user_id", senderId)
+                            put("friend_id", receiverId)
+                            put("name", receiverName)
+                        },
+                        buildJsonObject {
+                            put("user_id", receiverId)
+                            put("friend_id", senderId)
+                            put("name", senderName)
+                        }
+                    )
+                )
+            ) {
+                onConflict = "user_id,friend_id"
+            }
+
+            client.postgrest[friendRequestsTable].update(
+                body = buildJsonObject {
+                    put("status", "accepted")
+                }
+            ) {
+                filter { eq("id", normalizedId) }
+            }
+
+            true
+        }.getOrElse { throwable ->
+            println("acceptFriendRequest error: ${throwable.message}")
+            false
+        }
+
+    override suspend fun rejectFriendRequest(requestId: String): Boolean =
+        runCatching {
+            val normalizedId = requestId.trim()
+            if (normalizedId.isBlank()) return@runCatching false
+
+            val userId = effectiveUserId()
+            val requestRow = client.postgrest[friendRequestsTable]
+                .select(Columns.raw("id, receiver_id, status")) {
+                    filter { eq("id", normalizedId) }
+                    limit(1)
+                }
+                .decodeList<JsonObject>()
+                .firstOrNull()
+                ?: return@runCatching false
+            val receiverId = requestRow.getString("receiver_id")
+            val status = requestRow.getString("status")
+            if (receiverId != userId) return@runCatching false
+            if (status.lowercase() != "pending") return@runCatching false
+            client.postgrest[friendRequestsTable].update(
+                body = buildJsonObject {
+                    put("status", "rejected")
+                }
+            ) {
+                filter { eq("id", normalizedId) }
+            }
+            true
+        }.getOrElse { throwable ->
+            println("rejectFriendRequest error: ${throwable.message}")
+            false
+        }
+
 
     override suspend fun locations(): List<String> =
         restaurants().map { it.location }.distinct().sorted()

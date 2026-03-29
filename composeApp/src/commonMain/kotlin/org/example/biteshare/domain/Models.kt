@@ -97,6 +97,32 @@ enum class FriendAddResult {
     ERROR,
 }
 
+data class FriendRequest(
+    val id: String,
+    val senderId: String,
+    val senderName: String,
+    val receiverId: String,
+    val receiverName: String = "",
+    val status: FriendRequestStatus,
+)
+
+enum class FriendRequestStatus {
+    PENDING,
+    ACCEPTED,
+    REJECTED,
+}
+
+// what happened when the user tried to send a request
+enum class FriendRequestResult {
+    REQUEST_SENT,
+    EMPTY_INPUT,
+    SELF_NOT_ALLOWED,
+    ALREADY_FRIENDS,
+    ALREADY_PENDING,
+    NOT_FOUND,
+    ERROR,
+}
+
 data class Restaurant(
     val id: String,
     val name: String,
@@ -155,6 +181,22 @@ class PickModel(
     suspend fun addFriend(friendId: String): FriendAddResult = repo.addFriend(friendId)
 
     suspend fun locations(): List<String> = repo.locations()
+
+    // FRIEND REQUEST
+    suspend fun sendFriendRequest(targetUserId: String): FriendRequestResult =
+        repo.sendFriendRequest(targetUserId)
+
+    suspend fun incomingFriendRequests(): List<FriendRequest> =
+        repo.incomingFriendRequests()
+
+    suspend fun outgoingFriendRequests(): List<FriendRequest> =
+        repo.outgoingFriendRequests()
+
+    suspend fun acceptFriendRequest(requestId: String): Boolean =
+        repo.acceptFriendRequest(requestId)
+
+    suspend fun rejectFriendRequest(requestId: String): Boolean =
+        repo.rejectFriendRequest(requestId)
 
     suspend fun recommend(context: PickContext): List<Restaurant> {
         val restaurants = repo.restaurants()
