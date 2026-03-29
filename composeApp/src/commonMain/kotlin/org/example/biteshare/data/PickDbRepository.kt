@@ -15,7 +15,9 @@ import kotlinx.serialization.json.put
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.FriendAddResult
+import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteParticipant
@@ -36,6 +38,7 @@ class PickDbRepository(
     private val voteRestaurantsTable = "vote_session_restaurants"
     private val voteSessionVotesTable = "vote_session_votes"
     private val defaultUserId = "demo_user"
+    private var searchSignalCache: Map<String, String>? = null
 
     override suspend fun friends(): List<Friend> =
         runCatching {
@@ -163,6 +166,12 @@ class PickDbRepository(
             val summary = restaurants().firstOrNull { it.id == id }
             detailRow.toRestaurantDetail(summary, featuredItems)
         }.getOrElse { null }
+
+    override suspend fun restaurantSearchSignals(restaurant: Restaurant): String {
+        val baseSignals = buildBaseSignals(restaurant)
+        val detailSignals = searchSignalsById()[restaurant.id].orEmpty()
+        return if (detailSignals.isBlank()) baseSignals else "$baseSignals $detailSignals"
+    }
 
     override suspend fun userPreferences(): List<String> =
         runCatching {
@@ -416,6 +425,8 @@ class PickDbRepository(
 
     override suspend fun currentUserId(): String? = effectiveUserId()
 
+    override suspend fun currentUserLocation(): GeoPoint? = null
+
     private fun effectiveUserId(): String = userIdProvider() ?: defaultUserId
 
     private suspend fun fetchSelectionsForUser(userId: String): Set<String> {
@@ -439,16 +450,34 @@ class PickDbRepository(
     private fun JsonObject.toRestaurant(savedIds: Set<String>): Restaurant? {
         val id = getString("id")
         if (id.isBlank()) return null
+        val category = getString("category")
+        val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
+        val dietaryFromDb = RestaurantClassification.profileFromLevels(
+            vegan = getString("vegan_level"),
+            vegetarian = getString("vegetarian_level"),
+            halal = getString("halal_level"),
+            glutenFree = getString("gluten_free_level"),
+            dairyFree = getString("dairy_free_level"),
+        )
+        val dietaryProfile = if (RestaurantClassification.isAllUnknown(dietaryFromDb)) {
+            RestaurantClassification.deriveDietaryProfile(category, tags)
+        } else {
+            dietaryFromDb
+        }
         return Restaurant(
             id = id,
             name = getString("name"),
-            category = getString("category"),
+            category = category,
             price = getString("price"),
             eta = getString("eta"),
             rating = getDouble("rating"),
             isSaved = id in savedIds,
             location = getString("location", "Addis Ababa"),
             isOpenNow = getBoolean("is_open_now", true),
+            latitude = getDouble("latitude"),
+            longitude = getDouble("longitude"),
+            tags = tags,
+            dietaryProfile = dietaryProfile,
         )
     }
 
@@ -516,6 +545,52 @@ class PickDbRepository(
             else -> emptyList()
         }
     }
+
+    private suspend fun searchSignalsById(): Map<String, String> {
+        searchSignalCache?.let { return it }
+        val cache = runCatching {
+            val detailRows = client.postgrest[restaurantDetailsTable]
+                .select(Columns.raw("restaurant_id, description, attributes"))
+                .decodeList<JsonObject>()
+            val featuredRows = client.postgrest[featuredItemsTable]
+                .select(Columns.raw("restaurant_id, name, description"))
+                .decodeList<JsonObject>()
+
+            val featuredById = featuredRows
+                .mapNotNull { row ->
+                    val restaurantId = row.getString("restaurant_id")
+                    if (restaurantId.isBlank()) return@mapNotNull null
+                    val text = listOf(row.getString("name"), row.getString("description"))
+                        .joinToString(" ")
+                        .trim()
+                    restaurantId to text
+                }
+                .groupBy({ it.first }, { it.second })
+
+            detailRows.mapNotNull { row ->
+                val restaurantId = row.getString("restaurant_id")
+                if (restaurantId.isBlank()) return@mapNotNull null
+                val description = normalizeSignal(row.getString("description"))
+                val attributes = normalizeSignal(row.getStringList("attributes").joinToString(" "))
+                val featured = normalizeSignal(featuredById[restaurantId]?.joinToString(" ").orEmpty())
+                val combined = listOf(description, attributes, featured)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
+                if (combined.isBlank()) null else restaurantId to combined
+            }.toMap()
+        }.getOrElse { emptyMap() }
+        searchSignalCache = cache
+        return cache
+    }
+
+    private fun buildBaseSignals(restaurant: Restaurant): String =
+        listOf(restaurant.name, restaurant.category, restaurant.location)
+            .map { normalizeSignal(it) }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+
+    private fun normalizeSignal(value: String): String =
+        value.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 
     private suspend fun buildVoteSessions(sessionIds: List<String>): List<VoteSession> {
         val normalizedIds = sessionIds.filter { it.isNotBlank() }.distinct()

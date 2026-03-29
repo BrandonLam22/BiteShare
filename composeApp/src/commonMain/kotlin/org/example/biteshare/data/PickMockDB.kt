@@ -1,6 +1,7 @@
 package org.example.biteshare.data
 
 import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.VoteSession
@@ -12,6 +13,7 @@ class PickMockDB(
     preferences: List<String> = emptyList(),
     restrictions: List<String> = emptyList(),
     currentUserId: String? = null,
+    currentUserLocation: GeoPoint? = null,
     preferencesByUserId: Map<String, List<String>> = emptyMap(),
     restrictionsByUserId: Map<String, List<String>> = emptyMap(),
     savedSelectionsByUserId: Map<String, Set<String>> = emptyMap(),
@@ -23,6 +25,7 @@ class PickMockDB(
     private val preferenceData = preferences.toList()
     private val restrictionData = restrictions.toList()
     private val currentUserIdData = currentUserId
+    private val currentUserLocationData = currentUserLocation
     private val preferencesByUserIdData = preferencesByUserId.mapValues { it.value.toList() }
     private val restrictionsByUserIdData = restrictionsByUserId.mapValues { it.value.toList() }
     private val savedSelectionsData = savedSelectionsByUserId
@@ -40,6 +43,24 @@ class PickMockDB(
     override suspend fun restaurants(): List<Restaurant> = restaurantsData
 
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? = detailsData[id]
+
+    override suspend fun restaurantSearchSignals(restaurant: Restaurant): String {
+        val detail = detailsData[restaurant.id]
+        val featuredText = detail?.featuredItems
+            ?.joinToString(" ") { "${it.name} ${it.description}" }
+            .orEmpty()
+        return listOf(
+            restaurant.name,
+            restaurant.category,
+            restaurant.location,
+            detail?.description.orEmpty(),
+            detail?.attributes?.joinToString(" ").orEmpty(),
+            featuredText,
+        )
+            .map { normalizeSignal(it) }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+    }
 
     override suspend fun userPreferences(): List<String> {
         val userId = currentUserIdData
@@ -89,6 +110,8 @@ class PickMockDB(
 
     override suspend fun currentUserId(): String? = currentUserIdData
 
+    override suspend fun currentUserLocation(): GeoPoint? = currentUserLocationData
+
     override suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> {
         if (userIds.isEmpty()) return emptyMap()
         return userIds.associateWith { id -> savedSelectionsData[id].orEmpty().toSet() }
@@ -126,4 +149,7 @@ class PickMockDB(
         voteSessions.values.filter { session -> session.participants.any { it.id == userId } }
 
     override suspend fun voteSessionById(sessionId: String): VoteSession? = voteSessions[sessionId]
+
+    private fun normalizeSignal(value: String): String =
+        value.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 }

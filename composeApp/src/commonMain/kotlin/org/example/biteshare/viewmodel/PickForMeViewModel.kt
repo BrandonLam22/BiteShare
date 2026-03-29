@@ -10,25 +10,30 @@ import kotlinx.coroutines.launch
 import org.example.biteshare.data.PickRepository
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
+import org.example.biteshare.domain.DistanceFilter
 import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.PickContext
 import org.example.biteshare.domain.PickFilters
 import org.example.biteshare.domain.PickModel
 import org.example.biteshare.domain.PickMode
+import org.example.biteshare.location.LocationAccess
+import org.example.biteshare.location.NoopLocationAccess
 
 data class PickForMeUiState(
     val mode: PickMode = PickMode.ME_ONLY,
     val friends: List<Friend> = emptyList(),
     val selectedFriendIds: Set<String> = emptySet(),
     val filters: PickFilters = PickFilters(),
-    val locations: List<String> = emptyList(),
+    val currentLocation: GeoPoint? = null,
     val resultPreviewCount: Int = 0,
 )
 
 class PickForMeViewModel(
     private val model: PickModel,
+    private val locationAccess: LocationAccess = NoopLocationAccess,
 ) {
-    constructor(repo: PickRepository) : this(PickModel(repo))
+    constructor(repo: PickRepository) : this(PickModel(repo), NoopLocationAccess)
 
     var uiState by mutableStateOf(PickForMeUiState(mode = PickMode.ME_ONLY))
         private set
@@ -60,6 +65,13 @@ class PickForMeViewModel(
         updateFilters { it.copy(location = location) }
     }
 
+    fun setDistance(distance: DistanceFilter) {
+        updateFilters { it.copy(distance = distance) }
+        if (distance != DistanceFilter.ANY) {
+            requestCurrentLocation()
+        }
+    }
+
     fun setBudget(budget: BudgetFilter) {
         updateFilters { it.copy(budget = budget) }
     }
@@ -81,7 +93,8 @@ class PickForMeViewModel(
         PickContext(
             mode = uiState.mode,
             selectedFriendIds = uiState.selectedFriendIds,
-            filters = uiState.filters
+            filters = uiState.filters,
+            currentLocation = uiState.currentLocation,
         )
 
     private fun updateFilters(update: (PickFilters) -> PickFilters) {
@@ -102,9 +115,22 @@ class PickForMeViewModel(
     private fun loadLookups() {
         scope.launch {
             val friends = model.friends()
-            val locations = listOf("Any") + model.locations()
-            uiState = uiState.copy(friends = friends, locations = locations)
+            val currentLocation = model.currentUserLocation()
+            uiState = uiState.copy(
+                friends = friends,
+                currentLocation = currentLocation
+            )
             refreshPreview()
+        }
+    }
+
+    private fun requestCurrentLocation() {
+        scope.launch {
+            val location = locationAccess.requestCurrentLocation()
+            if (location != null) {
+                uiState = uiState.copy(currentLocation = location)
+                refreshPreview()
+            }
         }
     }
 }

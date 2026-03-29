@@ -25,10 +25,10 @@ class RecommendsViewModelTest {
             mode = PickMode.ME_ONLY,
             filters = PickFilters(
                 location = "Addis Ababa",
-                budget = BudgetFilter.BUDGET,
-                cuisine = CuisineFilter.DRINK,
+                budget = BudgetFilter.MID,
+                cuisine = CuisineFilter.PIZZA,
                 openNowOnly = true,
-                minRating = 9.0
+                minRating = 8.0
             )
         )
 
@@ -36,7 +36,7 @@ class RecommendsViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, vm.uiState.items.size)
-        assertEquals("Hope Café", vm.uiState.items.first().name)
+        assertEquals("Pizza Plaza", vm.uiState.items.first().name)
     }
 
     @Test

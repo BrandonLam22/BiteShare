@@ -57,18 +57,60 @@ on conflict (id) do update set
 
 -- Restaurants (mix of locations, prices, ratings, open/closed)
 insert into public.restaurants2 (
-    id, name, category, price, eta, rating, location, is_open_now
+    id, name, category, price, eta, rating, location, is_open_now,
+    latitude, longitude, tags,
+    vegan_level, vegetarian_level, halal_level, gluten_free_level, dairy_free_level
 ) values
-    ('r_pizza_1', 'Waterloo Brick Oven Pizza', 'Pizza', '$14.99', '18-28 min', 4.7, 'Waterloo', true),
-    ('r_shawarma_1', 'Cedar Shawarma House', 'Middle Eastern', '$11.25', '12-20 min', 4.6, 'Waterloo', true),
-    ('r_bubble_1', 'The Alley Bubble Tea', 'Drink', '$6.50', '8-15 min', 4.4, 'Waterloo', true),
-    ('r_sushi_1', 'Harbor Sushi Bar', 'Sushi', '$21.00', '25-35 min', 4.8, 'Kitchener', true),
-    ('r_ramen_1', 'Pork Belly Ramen', 'Japanese', '$17.50', '18-26 min', 4.6, 'Waterloo', true),
-    ('r_cafe_1', 'Maple Leaf Cafe', 'Coffee', '$4.95', '6-12 min', 4.2, 'Waterloo', false),
-    ('r_veggie_1', 'Kitchener Veggie Bowl', 'Local', '$13.25', '20-30 min', 4.1, 'Kitchener', true),
-    ('r_steak_1', 'Toronto Prime Steakhouse', 'Grill', '$42.00', '35-50 min', 4.9, 'Toronto', true),
-    ('r_burger_1', 'Campus Burger & Fries', 'Burgers', '$9.75', '14-22 min', 4.0, 'Waterloo', true),
-    ('r_pasta_1', 'Gluten-Free Pasta Place', 'Italian', '$15.50', '18-25 min', 4.3, 'Waterloo', true)
+    (
+        'r_pizza_1', 'Waterloo Brick Oven Pizza', 'Pizza', '$14.99', '18-28 min', 4.7, 'Waterloo', true,
+        43.4643, -80.5204, '["pizza","italian"]'::jsonb,
+        'PARTIAL', 'PARTIAL', 'UNKNOWN', 'NONE', 'NONE'
+    ),
+    (
+        'r_shawarma_1', 'Cedar Shawarma House', 'Middle Eastern', '$11.25', '12-20 min', 4.6, 'Waterloo', true,
+        43.4643, -80.5204, '["middle eastern","shawarma","halal"]'::jsonb,
+        'NONE', 'PARTIAL', 'PARTIAL', 'PARTIAL', 'PARTIAL'
+    ),
+    (
+        'r_bubble_1', 'The Alley Bubble Tea', 'Drink', '$6.50', '8-15 min', 4.4, 'Waterloo', true,
+        43.4643, -80.5204, '["bubble tea","drink","tea"]'::jsonb,
+        'PARTIAL', 'FULL', 'UNKNOWN', 'FULL', 'PARTIAL'
+    ),
+    (
+        'r_sushi_1', 'Harbor Sushi Bar', 'Sushi', '$21.00', '25-35 min', 4.8, 'Kitchener', true,
+        43.4516, -80.4925, '["sushi","japanese","seafood"]'::jsonb,
+        'NONE', 'PARTIAL', 'UNKNOWN', 'PARTIAL', 'FULL'
+    ),
+    (
+        'r_ramen_1', 'Pork Belly Ramen', 'Japanese', '$17.50', '18-26 min', 4.6, 'Waterloo', true,
+        43.4643, -80.5204, '["ramen","japanese","noodles"]'::jsonb,
+        'NONE', 'PARTIAL', 'UNKNOWN', 'NONE', 'FULL'
+    ),
+    (
+        'r_cafe_1', 'Maple Leaf Cafe', 'Coffee', '$4.95', '6-12 min', 4.2, 'Waterloo', false,
+        43.4643, -80.5204, '["coffee","cafe","drink"]'::jsonb,
+        'PARTIAL', 'FULL', 'UNKNOWN', 'PARTIAL', 'PARTIAL'
+    ),
+    (
+        'r_veggie_1', 'Kitchener Veggie Bowl', 'Local', '$13.25', '20-30 min', 4.1, 'Kitchener', true,
+        43.4516, -80.4925, '["vegetarian","healthy","bowl","local"]'::jsonb,
+        'PARTIAL', 'FULL', 'UNKNOWN', 'PARTIAL', 'PARTIAL'
+    ),
+    (
+        'r_steak_1', 'Toronto Prime Steakhouse', 'Grill', '$42.00', '35-50 min', 4.9, 'Toronto', true,
+        43.6532, -79.3832, '["steak","grill","fine dining","meat"]'::jsonb,
+        'NONE', 'PARTIAL', 'UNKNOWN', 'FULL', 'FULL'
+    ),
+    (
+        'r_burger_1', 'Campus Burger & Fries', 'Burgers', '$9.75', '14-22 min', 4.0, 'Waterloo', true,
+        43.4643, -80.5204, '["burgers","fast food"]'::jsonb,
+        'NONE', 'PARTIAL', 'UNKNOWN', 'NONE', 'PARTIAL'
+    ),
+    (
+        'r_pasta_1', 'Gluten-Free Pasta Place', 'Italian', '$15.50', '18-25 min', 4.3, 'Waterloo', true,
+        43.4643, -80.5204, '["italian","pasta","gluten free"]'::jsonb,
+        'PARTIAL', 'FULL', 'UNKNOWN', 'FULL', 'PARTIAL'
+    )
 on conflict (id) do update set
     name = excluded.name,
     category = excluded.category,
@@ -76,7 +118,15 @@ on conflict (id) do update set
     eta = excluded.eta,
     rating = excluded.rating,
     location = excluded.location,
-    is_open_now = excluded.is_open_now;
+    is_open_now = excluded.is_open_now,
+    latitude = excluded.latitude,
+    longitude = excluded.longitude,
+    tags = excluded.tags,
+    vegan_level = excluded.vegan_level,
+    vegetarian_level = excluded.vegetarian_level,
+    halal_level = excluded.halal_level,
+    gluten_free_level = excluded.gluten_free_level,
+    dairy_free_level = excluded.dairy_free_level;
 
 -- Restaurant details
 insert into public.restaurant_details (

@@ -55,6 +55,8 @@ import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.VoteHistoryDetailViewModel
 import org.example.biteshare.viewmodel.VoteHistoryViewModel
 import org.example.biteshare.viewmodel.VoteWithFriendsViewModel
+import org.example.biteshare.location.LocationAccess
+import org.example.biteshare.location.NoopLocationAccess
 
 private enum class Tab { Home, Review, Pick, Profile }
 
@@ -85,7 +87,10 @@ private sealed class ProfileRoute {
 }
 
 @Composable
-fun AppRoot(model: Model) {
+fun AppRoot(
+    model: Model,
+    locationAccess: LocationAccess = NoopLocationAccess,
+) {
     val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
     val pickRepo: PickRepository = remember(model) {
         PickDbRepository(userIdProvider = { model.currentUser?.id })
@@ -100,7 +105,7 @@ fun AppRoot(model: Model) {
 
     val homeVm = remember(repo, pickRepo) { HomeViewModel(repo, pickRepo) }
     val browseVm = remember(repo) { BrowseViewModel(repo) }
-    val pickVm = remember(pickModel) { PickForMeViewModel(pickModel) }
+    val pickVm = remember(pickModel, locationAccess) { PickForMeViewModel(pickModel, locationAccess) }
     val recVm = remember(pickModel) { RecommendsViewModel(pickModel) }
     val historyVm = remember(pickModel) { VoteHistoryViewModel(pickModel) }
     val profileVm = remember(repo) { ProfileViewModel(repo) }

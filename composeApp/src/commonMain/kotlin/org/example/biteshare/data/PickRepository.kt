@@ -2,6 +2,7 @@ package org.example.biteshare.data
 
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.FriendAddResult
+import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.VoteSession
@@ -25,6 +26,15 @@ interface PickRepository {
     suspend fun voteSessionsForUser(userId: String): List<VoteSession> = emptyList()
     suspend fun voteSessionById(sessionId: String): VoteSession? = null
     suspend fun currentUserId(): String? = null
+    suspend fun currentUserLocation(): GeoPoint? = null
     suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> = emptyMap()
     suspend fun setRestaurantSelection(userId: String, restaurantId: String, selected: Boolean) {}
+    suspend fun restaurantSearchSignals(restaurant: Restaurant): String =
+        listOf(restaurant.name, restaurant.category, restaurant.location)
+            .map { normalizeSignal(it) }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+
+    private fun normalizeSignal(value: String): String =
+        value.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 }

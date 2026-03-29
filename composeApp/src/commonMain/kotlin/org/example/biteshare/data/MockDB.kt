@@ -5,7 +5,9 @@ import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.PopularItem
+import org.example.biteshare.domain.DietaryProfile
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.Review
@@ -23,6 +25,29 @@ object MockDB {
     )
     val fakeFriends: List<Friend> = friends
 
+    private fun coordinatesForCity(city: String): Pair<Double, Double> =
+        when (city.lowercase()) {
+            "waterloo" -> 43.4643 to -80.5204
+            "kitchener" -> 43.4516 to -80.4925
+            "toronto" -> 43.6532 to -79.3832
+            "addis ababa" -> 8.9806 to 38.7578
+            else -> 0.0 to 0.0
+        }
+
+    private fun enrichRestaurant(restaurant: Restaurant): Restaurant {
+        val (lat, lon) = coordinatesForCity(restaurant.location)
+        val tags = RestaurantClassification.deriveTags(restaurant.category, restaurant.tags)
+        val derivedDietary = RestaurantClassification.deriveDietaryProfile(restaurant.category, tags)
+        val dietaryProfile =
+            if (restaurant.dietaryProfile != DietaryProfile()) restaurant.dietaryProfile else derivedDietary
+        return restaurant.copy(
+            latitude = lat,
+            longitude = lon,
+            tags = tags,
+            dietaryProfile = dietaryProfile,
+        )
+    }
+
     val fakeUsers = listOf(
         User(
             id = "test-user-1",
@@ -30,30 +55,38 @@ object MockDB {
             email = "k389zhan@uwaterloo.ca",
             password = "12345",
             savedRestaurantIds = listOf("p1", "b1", "bp1"),
-            friends = fakeFriends
+            friends = fakeFriends,
+            latitude = 43.4643,
+            longitude = -80.5204,
         ),
         User(
             id = "user_02",
             username = "Steven",
             email = "s38gao@uwaterloo.ca",
             password = "54321",
-            savedRestaurantIds = listOf("s1", "c1")
+            savedRestaurantIds = listOf("s1", "c1"),
+            latitude = 43.6532,
+            longitude = -79.3832,
         ),
         User(
             id = "user_03",
             username = "Alice",
             email = "alice@uwaterloo.ca",
-            password = "alice123"
+            password = "alice123",
+            latitude = 43.4516,
+            longitude = -80.4925,
         ),
         User(
             id = "user_04",
             username = "Brandon",
             email = "blam@uwaterloo.ca",
-            password = "brandon123"
+            password = "brandon123",
+            latitude = 8.9806,
+            longitude = 38.7578,
         )
     )
 
-    val coreRestaurants = listOf(
+    private val baseCoreRestaurants = listOf(
         Restaurant("p1", "Joe's Pizza", "Pizza", "$12.99", "18-28 min", 4.6, isSaved = true, location = "Waterloo"),
         Restaurant("s1", "Ken Sushi House", "Sushi", "$19.50", "25-35 min", 4.4, location = "Waterloo"),
         Restaurant("b1", "Mel's Diner", "Burgers", "$13.75", "20-30 min", 4.2, isSaved = true, location = "Waterloo"),
@@ -66,7 +99,9 @@ object MockDB {
         Restaurant("uw4", "Gol's Lanzhou Noodle", "Noodles", "$14.30", "18-26 min", 4.5, location = "Waterloo"),
     )
 
-    val browseRestaurants = listOf(
+    val coreRestaurants = baseCoreRestaurants.map(::enrichRestaurant)
+
+    private val baseBrowseRestaurants = listOf(
         Restaurant("bp1", "Pasta Palace", "Italian", "$13.50", "22-32 min", 4.2, isSaved = true, location = "Waterloo"),
         Restaurant("bp2", "Pizza Plaza", "Pizza", "$11.50", "19-29 min", 4.0, location = "Addis Ababa"),
         Restaurant("bp3", "Campus Pizza", "Pizza", "$10.20", "16-24 min", 4.1, location = "Waterloo"),
@@ -77,6 +112,8 @@ object MockDB {
         Restaurant("uw8", "Aunty's Kitchen", "Indian", "$15.90", "23-33 min", 4.5, location = "Waterloo"),
         Restaurant("uw9", "Kabob Hut Waterloo", "Grill", "$14.60", "20-30 min", 4.2, location = "Waterloo"),
     )
+
+    val browseRestaurants = baseBrowseRestaurants.map(::enrichRestaurant)
 
     val fakeRestaurants: List<Restaurant> = coreRestaurants
     val fakeBrowseRestaurants: List<Restaurant> = coreRestaurants + browseRestaurants

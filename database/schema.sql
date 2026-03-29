@@ -35,6 +35,14 @@ create table public.restaurants2 (
     rating double precision null,
     location text null,
     is_open_now boolean null,
+    latitude double precision null default '0'::double precision,
+    longitude double precision null default '0'::double precision,
+    tags jsonb null default '[]'::jsonb,
+    vegan_level text null default 'UNKNOWN',
+    vegetarian_level text null default 'UNKNOWN',
+    halal_level text null default 'UNKNOWN',
+    gluten_free_level text null default 'UNKNOWN',
+    dairy_free_level text null default 'UNKNOWN',
     constraint restaurants2_pkey primary key (id)
 ) TABLESPACE pg_default;
 

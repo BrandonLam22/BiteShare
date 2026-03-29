@@ -15,6 +15,8 @@ import org.example.biteshare.viewmodel.LoginViewModel
 import org.example.biteshare.viewmodel.SignupViewModel
 import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.data.SupabaseRepository
+import org.example.biteshare.location.LocationAccess
+import org.example.biteshare.location.NoopLocationAccess
 
 
 private sealed class AuthScreen {
@@ -25,7 +27,10 @@ private sealed class AuthScreen {
 }
 
 @Composable
-fun AuthGate(model: Model) {
+fun AuthGate(
+    model: Model,
+    locationAccess: LocationAccess = NoopLocationAccess,
+) {
     val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
 
     val isLoggedIn = model.currentUser != null
@@ -69,7 +74,7 @@ fun AuthGate(model: Model) {
             )
         }
         is AuthScreen.Home -> {
-            AppRoot(model = model)
+            AppRoot(model = model, locationAccess = locationAccess)
         }
     }
 }

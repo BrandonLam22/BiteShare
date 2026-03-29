@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
+import org.example.biteshare.domain.DistanceFilter
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.viewmodel.PickForMeViewModel
 
@@ -88,15 +89,24 @@ class PickForMeView(
             )
             Spacer(Modifier.height(12.dp))
 
-            FilterGroupTitle("Location")
+            FilterGroupTitle("Distance")
+            val hasLocation = s.currentLocation != null
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(s.locations) { location ->
+                items(DistanceFilter.entries.toList()) { distance ->
                     FilterChip(
-                        selected = s.filters.location == location,
-                        onClick = { vm.setLocation(location) },
-                        label = { Text(location) }
+                        selected = s.filters.distance == distance,
+                        onClick = { vm.setDistance(distance) },
+                        label = { Text(distance.label) }
                     )
                 }
+            }
+            if (!hasLocation) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Location unavailable. Tap a distance to request access.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -114,19 +124,23 @@ class PickForMeView(
 
             Spacer(Modifier.height(12.dp))
 
-            FilterGroupTitle("Food Type")
+            FilterGroupTitle("Cuisine")
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CuisineFilter.entries.toList().chunked(4).forEach { rowItems ->
+                CuisineFilter.entries.toList().chunked(3).forEach { rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         rowItems.forEach { cuisine ->
                             FilterChip(
+                                modifier = Modifier.weight(1f),
                                 selected = s.filters.cuisine == cuisine,
                                 onClick = { vm.setCuisine(cuisine) },
                                 label = { Text(cuisine.label) }
                             )
+                        }
+                        repeat(3 - rowItems.size) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
+import org.example.biteshare.domain.DistanceFilter
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.runMainTest
 import org.example.biteshare.viewmodel.PickForMeViewModel
@@ -25,7 +26,6 @@ class PickForMeViewModelTest {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.friends.isNotEmpty())
-        assertTrue(vm.uiState.locations.contains("Any"))
         assertTrue(vm.uiState.resultPreviewCount > 0)
     }
 
@@ -46,15 +46,17 @@ class PickForMeViewModelTest {
         val vm = PickForMeViewModel(FakeRepository())
 
         vm.setLocation("Addis Ababa")
+        vm.setDistance(DistanceFilter.FIVE_KM)
         vm.setBudget(BudgetFilter.BUDGET)
-        vm.setCuisine(CuisineFilter.DRINK)
+        vm.setCuisine(CuisineFilter.CHINESE)
         vm.setOpenNowOnly(true)
         vm.setMinRating(8.7)
         val context = vm.buildPickContext()
 
         assertEquals("Addis Ababa", context.filters.location)
+        assertEquals(DistanceFilter.FIVE_KM, context.filters.distance)
         assertEquals(BudgetFilter.BUDGET, context.filters.budget)
-        assertEquals(CuisineFilter.DRINK, context.filters.cuisine)
+        assertEquals(CuisineFilter.CHINESE, context.filters.cuisine)
         assertTrue(context.filters.openNowOnly)
         assertEquals(8.5, context.filters.minRating)
     }

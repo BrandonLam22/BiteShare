@@ -10,6 +10,8 @@ import org.example.biteshare.app.AppRoot
 import org.example.biteshare.app.AuthGate
 import org.example.biteshare.app.BiteShareTheme
 import org.example.biteshare.domain.Model  // ADD THIS IMPORT
+import org.example.biteshare.location.NoopLocationAccess
+import org.example.biteshare.location.rememberAndroidLocationAccess
 
 class MainActivity : ComponentActivity() {
     private val appModel = Model()
@@ -20,7 +22,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BiteShareTheme {
-                AuthGate(model = appModel)
+                val locationAccess = rememberAndroidLocationAccess()
+                AuthGate(model = appModel, locationAccess = locationAccess)
             }
         }
     }
@@ -30,6 +33,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppAndroidPreview() {
     BiteShareTheme {
-        AppRoot(model = Model())
+        AppRoot(model = Model(), locationAccess = NoopLocationAccess)
     }
 }

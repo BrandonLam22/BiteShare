@@ -5,6 +5,7 @@ import org.example.biteshare.domain.EditableProfile
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.FriendAddResult
+import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PickContext
@@ -214,6 +215,25 @@ class FakeRepository(
         }
     }
 
+    override suspend fun restaurantSearchSignals(restaurant: Restaurant): String {
+        val detail = MockDB.restaurantDetails[restaurant.id]
+        val featuredText = detail?.featuredItems
+            ?.joinToString(" ") { "${it.name} ${it.description}" }
+            .orEmpty()
+
+        return listOf(
+            restaurant.name,
+            restaurant.category,
+            restaurant.location,
+            detail?.description.orEmpty(),
+            detail?.attributes?.joinToString(" ").orEmpty(),
+            featuredText,
+        )
+            .map { normalizeTag(it) }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+    }
+
     override suspend fun locations(): List<String> =
         (restaurants() + browseRestaurants())
             .map { it.location }
@@ -227,6 +247,12 @@ class FakeRepository(
 
     override suspend fun userRestrictions(): List<String> =
         model.currentUser?.foodRestrictions ?: emptyList()
+
+    override suspend fun currentUserLocation(): GeoPoint? {
+        val user = model.currentUser ?: return null
+        if (user.latitude == 0.0 && user.longitude == 0.0) return null
+        return GeoPoint(user.latitude, user.longitude)
+    }
 
     override suspend fun userPreferencesByUserIds(userIds: Set<String>): Map<String, List<String>> {
         if (userIds.isEmpty()) return emptyMap()

@@ -10,12 +10,15 @@ class PickModelTest {
 
     @Test
     fun recommendRespectsLocationFilter() = runMainTest {
-        val repo = PickMockDB()
+        val repo = PickMockDB(
+            currentUserId = "me",
+            currentUserLocation = GeoPoint(43.4643, -80.5204)
+        )
         val model = PickModel(repo)
 
         val context = PickContext(
             mode = PickMode.ME_ONLY,
-            filters = PickFilters(location = "Waterloo")
+            filters = PickFilters(distance = DistanceFilter.ONE_KM)
         )
 
         val results = model.recommend(context)

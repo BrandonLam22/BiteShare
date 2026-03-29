@@ -18,11 +18,13 @@ import org.example.biteshare.domain.CategoryItem
 import org.example.biteshare.domain.EditableProfile
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
+import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.HomeFeed
 import org.example.biteshare.domain.Model
 import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
 import io.github.jan.supabase.auth.auth
 import org.example.biteshare.domain.UserRow
@@ -477,6 +479,14 @@ class SupabaseRepository(
         return fetchUserRow()?.foodRestrictions ?: fallback.userRestrictions()
     }
 
+    override suspend fun currentUserId(): String? = resolveCurrentUserId()
+
+    override suspend fun currentUserLocation(): GeoPoint? {
+        val user = model.currentUser
+        if (user == null || (user.latitude == 0.0 && user.longitude == 0.0)) return null
+        return GeoPoint(user.latitude, user.longitude)
+    }
+
 
     override suspend fun getPassword(): String {
         model.currentUser?.password?.takeIf { it.isNotBlank() }?.let { return it }
@@ -583,16 +593,34 @@ class SupabaseRepository(
     private fun JsonObject.toDomain(savedIds: Set<String>): Restaurant? {
         val id = getString("id")
         if (id.isBlank()) return null
+        val category = getString("category")
+        val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
+        val dietaryFromDb = RestaurantClassification.profileFromLevels(
+            vegan = getString("vegan_level"),
+            vegetarian = getString("vegetarian_level"),
+            halal = getString("halal_level"),
+            glutenFree = getString("gluten_free_level"),
+            dairyFree = getString("dairy_free_level"),
+        )
+        val dietaryProfile = if (RestaurantClassification.isAllUnknown(dietaryFromDb)) {
+            RestaurantClassification.deriveDietaryProfile(category, tags)
+        } else {
+            dietaryFromDb
+        }
         return Restaurant(
             id = id,
             name = getString("name"),
-            category = getString("category"),
+            category = category,
             price = getString("price"),
             eta = getString("eta"),
             rating = getDouble("rating"),
             isSaved = id in savedIds,
             location = getString("location", "Addis Ababa"),
             isOpenNow = getBoolean("is_open_now", true),
+            latitude = getDouble("latitude"),
+            longitude = getDouble("longitude"),
+            tags = tags,
+            dietaryProfile = dietaryProfile,
         )
     }
 
