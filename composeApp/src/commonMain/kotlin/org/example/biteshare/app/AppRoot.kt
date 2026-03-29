@@ -38,6 +38,7 @@ import org.example.biteshare.view.ReviewView
 import org.example.biteshare.view.SavedView
 import org.example.biteshare.view.VoteHistoryDetailView
 import org.example.biteshare.view.VoteHistoryView
+import org.example.biteshare.view.VoteInvitesView
 import org.example.biteshare.view.VoteWithFriendsView
 import org.example.biteshare.viewmodel.BrowseViewModel
 import org.example.biteshare.viewmodel.ChangePasswordViewModel
@@ -54,6 +55,7 @@ import org.example.biteshare.viewmodel.ReviewViewModel
 import org.example.biteshare.viewmodel.SavedViewModel
 import org.example.biteshare.viewmodel.VoteHistoryDetailViewModel
 import org.example.biteshare.viewmodel.VoteHistoryViewModel
+import org.example.biteshare.viewmodel.VoteInvitesViewModel
 import org.example.biteshare.viewmodel.VoteWithFriendsViewModel
 import org.example.biteshare.location.LocationAccess
 import org.example.biteshare.location.NoopLocationAccess
@@ -75,6 +77,8 @@ private sealed class PickRoute {
     data class GroupRecommend(val ctx: PickContext) : PickRoute()
     data class Vote(val ctx: PickContext) : PickRoute()
     data class SoloRecommend(val ctx: PickContext) : PickRoute()
+    data object Invites : PickRoute()
+    data class JoinVote(val sessionId: String) : PickRoute()
     data object History : PickRoute()
     data class HistoryDetail(val sessionId: String) : PickRoute()
 }
@@ -114,6 +118,7 @@ fun AppRoot(
     val pickVm = remember(pickModel, locationAccess) { PickForMeViewModel(pickModel, locationAccess) }
     val recVm = remember(pickModel) { RecommendsViewModel(pickModel) }
     val historyVm = remember(pickModel) { VoteHistoryViewModel(pickModel) }
+    val invitesVm = remember(pickModel) { VoteInvitesViewModel(pickModel) }
     val profileVm = remember(repo) { ProfileViewModel(repo) }
     val savedVm = remember(repo) { SavedViewModel(repo) }
     val privacyVm = remember(repo) { PrivacyViewModel(repo) }
@@ -240,6 +245,7 @@ fun AppRoot(
                                         }
                                     }
                                 },
+                                onInvites = { pickRoute = PickRoute.Invites },
                                 onHistory = { pickRoute = PickRoute.History }
                             ).Content()
                         }
@@ -281,6 +287,37 @@ fun AppRoot(
                             RecommendsView(
                                 vm = recVm,
                                 onBack = { pickRoute = PickRoute.Main }
+                            ).Content()
+                        }
+
+                        PickRoute.Invites -> {
+                            LaunchedEffect(Unit) {
+                                invitesVm.refresh()
+                            }
+                            VoteInvitesView(
+                                vm = invitesVm,
+                                onBack = { pickRoute = PickRoute.Main },
+                                onOpenSession = { sessionId ->
+                                    pickRoute = PickRoute.JoinVote(sessionId)
+                                }
+                            ).Content()
+                        }
+
+                        is PickRoute.JoinVote -> {
+                            val joinVm = remember(route.sessionId) {
+                                VoteWithFriendsViewModel(
+                                    model = pickModel,
+                                    sessionId = route.sessionId
+                                )
+                            }
+                            VoteWithFriendsView(
+                                vm = joinVm,
+                                onBack = { pickRoute = PickRoute.Invites },
+                                onFinish = { sessionId ->
+                                    if (sessionId.isNotBlank()) {
+                                        pickRoute = PickRoute.HistoryDetail(sessionId)
+                                    }
+                                }
                             ).Content()
                         }
 

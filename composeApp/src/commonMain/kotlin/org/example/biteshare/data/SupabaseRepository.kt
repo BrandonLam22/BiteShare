@@ -36,6 +36,7 @@ import org.example.biteshare.domain.UserRow
 import org.jetbrains.compose.resources.getString
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.ReviewTagCatalog
 import org.example.biteshare.domain.User
 import org.example.biteshare.viewmodel.FriendDetails
 import org.example.biteshare.viewmodel.FriendReview
@@ -292,6 +293,9 @@ class SupabaseRepository(
             fallback.getReviewsForRestaurant(normalizedName)
         }
     }
+
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> =
+        pickDbRepo.reviewsByUserIds(userIds)
 
     override suspend fun submitReview(review: Review) {
         val matchedRestaurant = restaurants().firstOrNull { restaurant ->
@@ -648,6 +652,7 @@ class SupabaseRepository(
         if (id.isBlank()) return null
         val category = getString("category")
         val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
+        val reviewTagProfile = getDoubleMap("review_tag_profile")
         val dietaryFromDb = RestaurantClassification.profileFromLevels(
             vegan = getString("vegan_level"),
             vegetarian = getString("vegetarian_level"),
@@ -669,11 +674,11 @@ class SupabaseRepository(
             rating = getDouble("rating"),
             isSaved = id in savedIds,
             location = getString("location", "Addis Ababa"),
-            isOpenNow = getBoolean("is_open_now", true),
             latitude = getDouble("latitude"),
             longitude = getDouble("longitude"),
             tags = tags,
             dietaryProfile = dietaryProfile,
+            reviewTagProfile = reviewTagProfile,
         )
     }
 
@@ -697,7 +702,7 @@ class SupabaseRepository(
         return Review(
             id = getString("id", Random.nextInt(0, 1_000_000).toString()),
             restaurantName = restaurantName,
-            tags = getStringList("tags"),
+            tags = ReviewTagCatalog.normalizeTags(getStringList("tags")),
             content = getString("content"),
             rating = getInt("rating", 5),
             userId = getString("user_id").takeIf { it.isNotBlank() },
@@ -759,6 +764,13 @@ class SupabaseRepository(
         (this[key] as? JsonArray)
             ?.mapNotNull { element -> (element as? JsonPrimitive)?.contentOrNull }
             ?: emptyList()
+
+    private fun JsonObject.getDoubleMap(key: String): Map<String, Double> {
+        val element = this[key] as? JsonObject ?: return emptyMap()
+        return element.mapNotNull { (k, v) ->
+            v.jsonPrimitive.doubleOrNull?.let { k to it }
+        }.toMap()
+    }
 
     private fun isDrinkCategory(category: String): Boolean {
         val key = category.lowercase()

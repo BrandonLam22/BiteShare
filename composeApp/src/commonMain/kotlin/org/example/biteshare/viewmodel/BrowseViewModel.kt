@@ -15,7 +15,6 @@ data class BrowseUiState(
     val resultCount: Int = 0,
     val locationLabel: String = "Addis Ababa",
     val priceLabel: String = "$$$",
-    val openStatus: String = "Open Now",
     val activeTag: String? = null,
     val headerTitle: String = "Top Food Places",
 )

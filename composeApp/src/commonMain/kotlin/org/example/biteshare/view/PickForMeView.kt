@@ -25,6 +25,7 @@ import org.example.biteshare.viewmodel.PickForMeViewModel
 class PickForMeView(
     private val vm: PickForMeViewModel,
     private val onGo: () -> Unit,
+    private val onInvites: () -> Unit,
     private val onHistory: () -> Unit,
 ) {
     @Composable
@@ -73,8 +74,16 @@ class PickForMeView(
                 }
 
                 Spacer(Modifier.height(18.dp))
-                Button(onClick = onHistory) {
-                    Text("View Voting History")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(onClick = onInvites, modifier = Modifier.weight(1f)) {
+                        Text("Vote Invites")
+                    }
+                    Button(onClick = onHistory, modifier = Modifier.weight(1f)) {
+                        Text("Voting History")
+                    }
                 }
 
                 Spacer(Modifier.height(22.dp))
@@ -147,21 +156,6 @@ class PickForMeView(
             }
 
             Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Open now only",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Switch(
-                    checked = s.filters.openNowOnly,
-                    onCheckedChange = vm::setOpenNowOnly
-                )
-            }
 
             Text(
                 text = "Minimum rating: ${s.filters.minRating}/10",

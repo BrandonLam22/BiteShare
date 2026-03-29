@@ -132,11 +132,11 @@ data class Restaurant(
     val rating: Double,
     val isSaved: Boolean = false,
     val location: String = "Addis Ababa",
-    val isOpenNow: Boolean = true,
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val tags: Set<String> = emptySet(),
     val dietaryProfile: DietaryProfile = DietaryProfile(),
+    val reviewTagProfile: Map<String, Double> = emptyMap(),
 )
 
 data class GeoPoint(
@@ -149,7 +149,6 @@ data class PickFilters(
     val distance: DistanceFilter = DistanceFilter.ANY,
     val budget: BudgetFilter = BudgetFilter.ANY,
     val cuisine: CuisineFilter = CuisineFilter.ANY,
-    val openNowOnly: Boolean = false,
     val minRating: Double = 0.0,
 )
 
@@ -206,6 +205,7 @@ class PickModel(
         val preferences = mergedPreferences(context)
         return rankForMode(
             restaurants = withoutRestrictedItems,
+            allRestaurants = restaurants,
             mode = context.mode,
             selectedFriendIds = context.selectedFriendIds,
             preferences = preferences,
@@ -245,11 +245,17 @@ class PickModel(
     suspend fun voteSessionsForCurrentUser(): List<VoteSession> {
         val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return emptyList()
         return repo.voteSessionsForUser(userId).map { session ->
-            val participants = session.participants.map { participant ->
+            val participants = mutableListOf<VoteParticipant>()
+            session.participants.forEach { participant ->
                 if (participant.id == userId) {
-                    participant.copy(name = "You", isSelf = true)
+                    participants += participant.copy(name = "You", isSelf = true)
                 } else {
-                    participant.copy(isSelf = false)
+                    val fixedName = if (participant.name == "You") {
+                        userDisplayName(participant.id)?.takeIf { it.isNotBlank() } ?: participant.id
+                    } else {
+                        participant.name
+                    }
+                    participants += participant.copy(name = fixedName, isSelf = false)
                 }
             }
             session.copy(participants = participants)
@@ -260,14 +266,36 @@ class PickModel(
         val userId = currentUserId()?.takeIf { it.isNotBlank() }
         val session = repo.voteSessionById(sessionId) ?: return null
         if (userId == null) return session
-        val participants = session.participants.map { participant ->
+        val participants = mutableListOf<VoteParticipant>()
+        session.participants.forEach { participant ->
             if (participant.id == userId) {
-                participant.copy(name = "You", isSelf = true)
+                participants += participant.copy(name = "You", isSelf = true)
             } else {
-                participant.copy(isSelf = false)
+                val fixedName = if (participant.name == "You") {
+                    userDisplayName(participant.id)?.takeIf { it.isNotBlank() } ?: participant.id
+                } else {
+                    participant.name
+                }
+                participants += participant.copy(name = fixedName, isSelf = false)
             }
         }
         return session.copy(participants = participants)
+    }
+
+    suspend fun voteNotificationsForCurrentUser(): List<VoteNotification> {
+        val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return emptyList()
+        return repo.voteNotificationsForUser(userId)
+    }
+
+    suspend fun markVoteNotificationsRead(sessionId: String) {
+        val userId = currentUserId()?.takeIf { it.isNotBlank() } ?: return
+        if (sessionId.isBlank()) return
+        repo.markVoteNotificationsRead(sessionId, userId)
+    }
+
+    suspend fun userDisplayName(userId: String): String? {
+        if (userId.isBlank()) return null
+        return repo.userDisplayName(userId)
     }
 
     private suspend fun mergedPreferences(context: PickContext): List<String> {
@@ -307,7 +335,6 @@ class PickModel(
             val distanceMatches = matchesDistance(restaurant, filters.distance, currentLocation)
             val budgetMatches = matchesBudget(restaurant, filters.budget)
             val cuisineMatches = matchesCuisine(restaurant, filters.cuisine)
-            val openStatusMatches = !filters.openNowOnly || restaurant.isOpenNow
             // Restaurant.rating is stored on a 5-point scale; UI filter uses 10-point scale.
             val ratingMatches = (restaurant.rating * 2) >= filters.minRating
 
@@ -315,7 +342,6 @@ class PickModel(
                 distanceMatches &&
                 budgetMatches &&
                 cuisineMatches &&
-                openStatusMatches &&
                 ratingMatches
         }
     }
@@ -403,18 +429,38 @@ class PickModel(
 
     private suspend fun rankForMode(
         restaurants: List<Restaurant>,
+        allRestaurants: List<Restaurant>,
         mode: PickMode,
         selectedFriendIds: Set<String>,
         preferences: List<String>,
     ): List<Restaurant> {
         val preferenceTags = resolvePreferenceTags(preferences)
-        val preferenceScoreById = mutableMapOf<String, Int>()
+        val preferenceScoreById = mutableMapOf<String, Double>()
         if (preferenceTags.isNotEmpty()) {
             for (restaurant in restaurants) {
                 preferenceScoreById[restaurant.id] = preferenceScore(restaurant, preferenceTags)
             }
         }
-        fun score(restaurant: Restaurant): Int = preferenceScoreById[restaurant.id] ?: 0
+
+        val similarity = buildSimilaritySignals(
+            allRestaurants = allRestaurants,
+            mode = mode,
+            selectedFriendIds = selectedFriendIds,
+        )
+        val similarityScoreById = mutableMapOf<String, Double>()
+        for (restaurant in restaurants) {
+            val vector = similarityVector(restaurant)
+            val savedSim = maxSimilarity(vector, similarity.savedVectors)
+            val highSim = maxSimilarity(vector, similarity.highVectors)
+            val lowSim = maxSimilarity(vector, similarity.lowVectors)
+            val preferenceScore = preferenceScoreById[restaurant.id] ?: 0.0
+            similarityScoreById[restaurant.id] = preferenceScore +
+                (savedSim * SimilarityWeights.SAVED_WEIGHT) +
+                (highSim * SimilarityWeights.HIGH_REVIEW_WEIGHT) -
+                (lowSim * SimilarityWeights.LOW_REVIEW_PENALTY)
+        }
+
+        fun score(restaurant: Restaurant): Double = similarityScoreById[restaurant.id] ?: 0.0
 
         return when (mode) {
             PickMode.ME_ONLY -> {
@@ -460,9 +506,11 @@ class PickModel(
     private fun preferenceScore(
         restaurant: Restaurant,
         preferenceTags: Set<String>,
-    ): Int {
-        if (preferenceTags.isEmpty()) return 0
-        return preferenceTags.count { tag -> tag in restaurant.tags }
+    ): Double {
+        if (preferenceTags.isEmpty()) return 0.0
+        val tags = similarityTags(restaurant)
+        val matches = preferenceTags.count { tag -> tag in tags }
+        return matches.toDouble() / preferenceTags.size.toDouble()
     }
 
     private fun resolvePreferenceTags(preferences: List<String>): Set<String> {
@@ -530,6 +578,148 @@ class PickModel(
         val requiredDietary: Set<DietaryRestriction> = emptySet(),
     ) {
         fun isEmpty(): Boolean = excludedTags.isEmpty() && requiredDietary.isEmpty()
+    }
+
+    private data class SimilarityData(
+        val savedVectors: List<SimilarityVector>,
+        val highVectors: List<SimilarityVector>,
+        val lowVectors: List<SimilarityVector>,
+    )
+
+    private object SimilarityWeights {
+        const val SAVED_WEIGHT = 0.30
+        const val HIGH_REVIEW_WEIGHT = 0.25
+        const val LOW_REVIEW_PENALTY = 0.40
+        const val CUISINE_WEIGHT = 0.60
+        const val REVIEW_WEIGHT = 0.40
+    }
+
+    private suspend fun buildSimilaritySignals(
+        allRestaurants: List<Restaurant>,
+        mode: PickMode,
+        selectedFriendIds: Set<String>,
+    ): SimilarityData {
+        val userIds = buildSet {
+            repo.currentUserId()?.takeIf { it.isNotBlank() }?.let { add(it) }
+            if (mode == PickMode.WITH_FRIENDS) {
+                addAll(selectedFriendIds.filter { it.isNotBlank() })
+            }
+        }
+        if (userIds.isEmpty()) {
+            return SimilarityData(emptyList(), emptyList(), emptyList())
+        }
+
+        val restaurantsById = allRestaurants.associateBy { it.id }
+        val restaurantsByName = allRestaurants.associateBy { it.name.trim().lowercase() }
+
+        val savedIds = repo.restaurantSelectionsByUserIds(userIds)
+            .values
+            .flatten()
+            .toSet()
+        val savedRestaurants = savedIds.mapNotNull { restaurantsById[it] }
+
+        val reviews = repo.reviewsByUserIds(userIds)
+        val highRated = reviews.filter { it.rating >= HIGH_RATING_THRESHOLD }
+            .mapNotNull { review -> restaurantsByName[review.restaurantName.trim().lowercase()] }
+        val lowRated = reviews.filter { it.rating <= LOW_RATING_THRESHOLD }
+            .mapNotNull { review -> restaurantsByName[review.restaurantName.trim().lowercase()] }
+
+        return SimilarityData(
+            savedVectors = savedRestaurants.map { similarityVector(it) },
+            highVectors = highRated.map { similarityVector(it) },
+            lowVectors = lowRated.map { similarityVector(it) },
+        )
+    }
+
+    private data class SimilarityVector(
+        val tags: Set<String>,
+        val reviewProfile: Map<String, Double>,
+    )
+
+    private fun similarityVector(restaurant: Restaurant): SimilarityVector {
+        return SimilarityVector(
+            tags = similarityTags(restaurant),
+            reviewProfile = normalizeReviewProfile(restaurant.reviewTagProfile),
+        )
+    }
+
+    private fun similarityTags(restaurant: Restaurant): Set<String> {
+        if (restaurant.tags.isNotEmpty()) return restaurant.tags
+        val normalized = RestaurantClassification.normalizeTag(restaurant.category)
+        return if (normalized.isBlank()) emptySet() else setOf(normalized)
+    }
+
+    private fun normalizeReviewProfile(profile: Map<String, Double>): Map<String, Double> {
+        if (profile.isEmpty()) return emptyMap()
+        val total = profile.values.filter { it > 0.0 }.sum()
+        if (total <= 0.0) return emptyMap()
+        return profile.mapNotNull { (key, value) ->
+            if (value <= 0.0) null else key to (value / total)
+        }.toMap()
+    }
+
+    private fun maxSimilarity(
+        vector: SimilarityVector,
+        referenceVectors: List<SimilarityVector>,
+    ): Double {
+        if (referenceVectors.isEmpty()) return 0.0
+        var best = 0.0
+        for (candidate in referenceVectors) {
+            val sim = combinedSimilarity(vector, candidate)
+            if (sim > best) best = sim
+        }
+        return best
+    }
+
+    private fun combinedSimilarity(
+        left: SimilarityVector,
+        right: SimilarityVector,
+    ): Double {
+        val tagSim = jaccard(left.tags, right.tags)
+        val reviewSim = cosineSimilarity(left.reviewProfile, right.reviewProfile)
+
+        val tagWeight =
+            if (left.tags.isEmpty() || right.tags.isEmpty()) 0.0 else SimilarityWeights.CUISINE_WEIGHT
+        val reviewWeight =
+            if (left.reviewProfile.isEmpty() || right.reviewProfile.isEmpty()) 0.0 else SimilarityWeights.REVIEW_WEIGHT
+        val total = tagWeight + reviewWeight
+        if (total == 0.0) return 0.0
+        return (tagSim * tagWeight + reviewSim * reviewWeight) / total
+    }
+
+    private fun jaccard(left: Set<String>, right: Set<String>): Double {
+        if (left.isEmpty() && right.isEmpty()) return 0.0
+        val intersection = left.count { it in right }
+        if (intersection == 0) return 0.0
+        val union = left.size + right.size - intersection
+        return intersection.toDouble() / union.toDouble()
+    }
+
+    private fun cosineSimilarity(
+        left: Map<String, Double>,
+        right: Map<String, Double>,
+    ): Double {
+        if (left.isEmpty() || right.isEmpty()) return 0.0
+        var dot = 0.0
+        var leftNorm = 0.0
+        var rightNorm = 0.0
+        left.forEach { (key, value) ->
+            leftNorm += value * value
+            val other = right[key]
+            if (other != null) {
+                dot += value * other
+            }
+        }
+        right.values.forEach { value ->
+            rightNorm += value * value
+        }
+        if (leftNorm == 0.0 || rightNorm == 0.0) return 0.0
+        return dot / (kotlin.math.sqrt(leftNorm) * kotlin.math.sqrt(rightNorm))
+    }
+
+    private companion object {
+        const val HIGH_RATING_THRESHOLD = 8
+        const val LOW_RATING_THRESHOLD = 4
     }
 }
 

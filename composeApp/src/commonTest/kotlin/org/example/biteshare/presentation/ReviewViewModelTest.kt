@@ -1,6 +1,9 @@
 package org.example.biteshare.presentation
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.example.biteshare.domain.Model
+import org.example.biteshare.runMainTest
 import org.example.biteshare.viewmodel.ReviewViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,40 +14,44 @@ import kotlin.test.assertTrue
  * Unit tests for ReviewViewModel (presentation layer).
  * Tests tag selection, review validation, and character limit.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ReviewViewModelTest {
 
     @Test
-    fun toggleTagAddsTagWhenNotSelected() {
+    fun toggleTagAddsTagWhenNotSelected() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
-        val tag = "Good Taste"
+        advanceUntilIdle()
+        val tagId = "taste_good"
 
         // Act
-        vm.toggleTag(tag)
+        vm.toggleTag(tagId)
 
         // Assert
-        assertTrue(vm.selectedTags.contains(tag))
+        assertTrue(vm.selectedTags.contains(tagId))
     }
 
     @Test
-    fun toggleTagRemovesTagWhenAlreadySelected() {
+    fun toggleTagRemovesTagWhenAlreadySelected() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
-        val tag = "Economical"
-        vm.toggleTag(tag)
-        assertTrue(vm.selectedTags.contains(tag))
+        advanceUntilIdle()
+        val tagId = "value_good"
+        vm.toggleTag(tagId)
+        assertTrue(vm.selectedTags.contains(tagId))
 
         // Act
-        vm.toggleTag(tag)
+        vm.toggleTag(tagId)
 
         // Assert
-        assertFalse(vm.selectedTags.contains(tag))
+        assertFalse(vm.selectedTags.contains(tagId))
     }
 
     @Test
-    fun updateReviewTextAcceptsUpTo50Characters() {
+    fun updateReviewTextAcceptsUpTo50Characters() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
         val text = "a".repeat(50)
 
         // Act
@@ -56,9 +63,10 @@ class ReviewViewModelTest {
     }
 
     @Test
-    fun updateReviewTextIgnoresTextOver50Characters() {
+    fun updateReviewTextIgnoresTextOver50Characters() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
         val validText = "a".repeat(50)
         vm.updateReviewText(validText)
 
@@ -71,20 +79,25 @@ class ReviewViewModelTest {
     }
 
     @Test
-    fun availableTagsContainsExpectedTags() {
+    fun availableTagsContainsExpectedTags() = runMainTest {
         // Arrange & Act
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
+        val allTags = vm.tagCategories.flatMap { it.tags }
+        val labels = allTags.map { it.label }
+        val ids = allTags.map { it.id }
 
         // Assert
-        assertTrue(vm.availableTags.contains("Good Taste"))
-        assertTrue(vm.availableTags.contains("Economical"))
-        assertTrue(vm.availableTags.isNotEmpty())
+        assertTrue("Good Taste" in labels)
+        assertTrue("value_good" in ids)
+        assertTrue(allTags.isNotEmpty())
     }
 
     @Test
-    fun selectRestaurantStoresSelectionAndClearsSuggestions() {
+    fun selectRestaurantStoresSelectionAndClearsSuggestions() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
 
         // Act
         vm.selectRestaurant("Joe's Pizza")
@@ -96,9 +109,10 @@ class ReviewViewModelTest {
     }
 
     @Test
-    fun clearSelectedRestaurantResetsSearchState() {
+    fun clearSelectedRestaurantResetsSearchState() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
         vm.selectRestaurant("Joe's Pizza")
 
         // Act
@@ -111,9 +125,10 @@ class ReviewViewModelTest {
     }
 
     @Test
-    fun onPostClickedRequiresRestaurantSelection() {
+    fun onPostClickedRequiresRestaurantSelection() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
 
         // Act
         vm.onPostClicked()
@@ -123,9 +138,10 @@ class ReviewViewModelTest {
     }
 
     @Test
-    fun onPostClickedRequiresReviewText() {
+    fun onPostClickedRequiresReviewText() = runMainTest {
         // Arrange
         val vm = ReviewViewModel(Model())
+        advanceUntilIdle()
         vm.selectRestaurant("Joe's Pizza")
 
         // Act

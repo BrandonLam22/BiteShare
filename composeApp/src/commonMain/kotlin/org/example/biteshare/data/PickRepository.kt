@@ -8,6 +8,8 @@ import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.VoteSession
 import org.example.biteshare.domain.FriendRequest
 import org.example.biteshare.domain.FriendRequestResult
+import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.VoteNotification
 
 interface PickRepository {
     suspend fun friends(): List<Friend>
@@ -29,12 +31,16 @@ interface PickRepository {
     suspend fun userRestrictions(): List<String>
     suspend fun userPreferencesByUserIds(userIds: Set<String>): Map<String, List<String>> = emptyMap()
     suspend fun userRestrictionsByUserIds(userIds: Set<String>): Map<String, List<String>> = emptyMap()
+    suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> = emptyList()
     suspend fun createVoteSession(session: VoteSession) {}
     suspend fun updateVoteSessionVotes(sessionId: String, userId: String, votes: Set<String>) {}
     suspend fun voteSessionVotes(sessionId: String): Map<String, Set<String>> = emptyMap()
     suspend fun closeVoteSession(sessionId: String, closedAtEpoch: Long) {}
     suspend fun voteSessionsForUser(userId: String): List<VoteSession> = emptyList()
     suspend fun voteSessionById(sessionId: String): VoteSession? = null
+    suspend fun voteNotificationsForUser(userId: String): List<VoteNotification> = emptyList()
+    suspend fun markVoteNotificationsRead(sessionId: String, userId: String) {}
+    suspend fun userDisplayName(userId: String): String? = null
     suspend fun currentUserId(): String? = null
     suspend fun currentUserLocation(): GeoPoint? = null
     suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> = emptyMap()

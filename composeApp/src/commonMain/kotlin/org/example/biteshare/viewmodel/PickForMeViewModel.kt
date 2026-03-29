@@ -80,10 +80,6 @@ class PickForMeViewModel(
         updateFilters { it.copy(cuisine = cuisine) }
     }
 
-    fun setOpenNowOnly(openNowOnly: Boolean) {
-        updateFilters { it.copy(openNowOnly = openNowOnly) }
-    }
-
     fun setMinRating(minRating: Double) {
         val normalized = (minRating * 2).toInt() / 2.0
         updateFilters { it.copy(minRating = normalized) }

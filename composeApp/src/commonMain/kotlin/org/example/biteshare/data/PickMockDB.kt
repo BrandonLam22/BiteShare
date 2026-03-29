@@ -4,6 +4,8 @@ import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.GeoPoint
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
+import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.VoteNotification
 import org.example.biteshare.domain.VoteSession
 
 class PickMockDB(
@@ -17,6 +19,7 @@ class PickMockDB(
     preferencesByUserId: Map<String, List<String>> = emptyMap(),
     restrictionsByUserId: Map<String, List<String>> = emptyMap(),
     savedSelectionsByUserId: Map<String, Set<String>> = emptyMap(),
+    reviewsByUserId: Map<String, List<Review>> = emptyMap(),
     initialVoteSessions: List<VoteSession> = emptyList(),
 ) : PickRepository {
     private val friendsData = friends.toList()
@@ -31,9 +34,11 @@ class PickMockDB(
     private val savedSelectionsData = savedSelectionsByUserId
         .mapValues { it.value.toMutableSet() }
         .toMutableMap()
+    private val reviewsByUserIdData = reviewsByUserId.mapValues { it.value.toList() }
     private val voteSessions = initialVoteSessions
         .associateBy { it.id }
         .toMutableMap()
+    private val voteNotifications = mutableListOf<VoteNotification>()
 
     override suspend fun friends(): List<Friend> = friendsData
 
@@ -117,6 +122,13 @@ class PickMockDB(
         return userIds.associateWith { id -> savedSelectionsData[id].orEmpty().toSet() }
     }
 
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> {
+        if (userIds.isEmpty()) return emptyList()
+        return userIds
+            .flatMap { id -> reviewsByUserIdData[id].orEmpty() }
+            .distinctBy { it.id }
+    }
+
     override suspend fun setRestaurantSelection(userId: String, restaurantId: String, selected: Boolean) {
         if (userId.isBlank() || restaurantId.isBlank()) return
         val selections = savedSelectionsData.getOrPut(userId) { mutableSetOf() }
@@ -130,6 +142,26 @@ class PickMockDB(
     override suspend fun createVoteSession(session: VoteSession) {
         if (session.id.isBlank()) return
         voteSessions[session.id] = session
+        val creatorId = currentUserIdData
+        val createdAtEpoch = session.createdAtEpoch
+        val participantIds = session.participants
+            .map { it.id }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .filter { it != creatorId }
+        participantIds.forEach { userId ->
+            val notificationId = "notif_${session.id}_$userId"
+            val exists = voteNotifications.any { it.id == notificationId }
+            if (!exists) {
+                voteNotifications += VoteNotification(
+                    id = notificationId,
+                    sessionId = session.id,
+                    userId = userId,
+                    createdAtEpoch = createdAtEpoch,
+                    readAtEpoch = null
+                )
+            }
+        }
     }
 
     override suspend fun updateVoteSessionVotes(sessionId: String, userId: String, votes: Set<String>) {
@@ -149,6 +181,31 @@ class PickMockDB(
         voteSessions.values.filter { session -> session.participants.any { it.id == userId } }
 
     override suspend fun voteSessionById(sessionId: String): VoteSession? = voteSessions[sessionId]
+
+    override suspend fun voteNotificationsForUser(userId: String): List<VoteNotification> {
+        if (userId.isBlank()) return emptyList()
+        return voteNotifications.filter { it.userId == userId }
+    }
+
+    override suspend fun markVoteNotificationsRead(sessionId: String, userId: String) {
+        if (sessionId.isBlank() || userId.isBlank()) return
+        val now = System.currentTimeMillis()
+        voteNotifications.replaceAll { notification ->
+            if (notification.sessionId == sessionId && notification.userId == userId) {
+                notification.copy(readAtEpoch = now)
+            } else {
+                notification
+            }
+        }
+    }
+
+    override suspend fun userDisplayName(userId: String): String? {
+        if (userId.isBlank()) return null
+        val fromUsers = MockDB.fakeUsers.firstOrNull { it.id == userId }?.username
+        if (!fromUsers.isNullOrBlank()) return fromUsers
+        val fromFriends = friendsData.firstOrNull { it.id == userId }?.name
+        return fromFriends?.takeIf { it.isNotBlank() } ?: userId
+    }
 
     private fun normalizeSignal(value: String): String =
         value.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()

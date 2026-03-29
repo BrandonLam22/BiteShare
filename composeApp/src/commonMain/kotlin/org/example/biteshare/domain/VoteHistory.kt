@@ -16,3 +16,14 @@ data class VoteSession(
     val isClosed: Boolean = false,
     val closedAtEpoch: Long? = null,
 )
+
+data class VoteNotification(
+    val id: String,
+    val sessionId: String,
+    val userId: String,
+    val createdAtEpoch: Long,
+    val readAtEpoch: Long? = null,
+) {
+    val isRead: Boolean
+        get() = readAtEpoch != null && readAtEpoch > 0
+}

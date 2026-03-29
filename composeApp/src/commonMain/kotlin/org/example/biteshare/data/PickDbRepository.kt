@@ -10,21 +10,26 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.FriendAddResult
 import org.example.biteshare.domain.GeoPoint
+import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.ReviewTagCatalog
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteParticipant
 import org.example.biteshare.domain.VoteSession
+import org.example.biteshare.domain.VoteNotification
 import org.example.biteshare.domain.FriendRequest
 import org.example.biteshare.domain.FriendRequestResult
 import org.example.biteshare.domain.FriendRequestStatus
+import kotlin.random.Random
 
 class PickDbRepository(
     private val client: SupabaseClient = SupabaseClientProvider.client,
@@ -35,11 +40,13 @@ class PickDbRepository(
     private val restaurantDetailsTable = "restaurant_details"
     private val featuredItemsTable = "featured_items"
     private val userSavedRestaurantsTable = "user_saved_restaurants"
+    private val reviewsTable = "reviews"
     private val usersTable = "users"
     private val voteSessionsTable = "vote_sessions"
     private val voteParticipantsTable = "vote_session_participants"
     private val voteRestaurantsTable = "vote_session_restaurants"
     private val voteSessionVotesTable = "vote_session_votes"
+    private val voteNotificationsTable = "vote_notifications"
     private val defaultUserId = "demo_user"
     private var searchSignalCache: Map<String, String>? = null
     private val friendRequestsTable = "friend_requests"
@@ -498,6 +505,18 @@ class PickDbRepository(
             }.toMap()
         }.getOrElse { emptyMap() }
 
+    override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> =
+        runCatching {
+            val filteredIds = userIds.filter { it.isNotBlank() }
+            if (filteredIds.isEmpty()) return@runCatching emptyList()
+            val raw = client.postgrest[reviewsTable]
+                .select(Columns.raw("*")) {
+                    filter { isIn("user_id", filteredIds) }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row -> row.toReview() }
+        }.getOrElse { emptyList() }
+
     override suspend fun createVoteSession(session: VoteSession) {
         if (session.id.isBlank()) return
         runCatching {
@@ -567,6 +586,27 @@ class PickDbRepository(
                     body = JsonArray(voteRows)
                 ) {
                     onConflict = "session_id,user_id,restaurant_id"
+                }
+            }
+
+            val creatorId = effectiveUserId().takeIf { it.isNotBlank() }
+            val notificationRows = session.participants
+                .map { it.id }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .filter { it != creatorId }
+                .map { userId ->
+                    buildJsonObject {
+                        put("session_id", session.id)
+                        put("user_id", userId)
+                        put("created_at_epoch", session.createdAtEpoch)
+                    }
+                }
+            if (notificationRows.isNotEmpty()) {
+                client.postgrest[voteNotificationsTable].upsert(
+                    body = JsonArray(notificationRows)
+                ) {
+                    onConflict = "session_id,user_id"
                 }
             }
         }
@@ -651,6 +691,49 @@ class PickDbRepository(
             buildVoteSessions(listOf(sessionId)).firstOrNull()
         }.getOrElse { null }
 
+    override suspend fun voteNotificationsForUser(userId: String): List<VoteNotification> =
+        runCatching {
+            if (userId.isBlank()) return@runCatching emptyList()
+            val raw = client.postgrest[voteNotificationsTable]
+                .select(Columns.raw("id, session_id, user_id, created_at_epoch, read_at_epoch")) {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<JsonObject>()
+            raw.mapNotNull { row ->
+                val id = row.getString("id")
+                val sessionId = row.getString("session_id")
+                val ownerId = row.getString("user_id")
+                if (id.isBlank() || sessionId.isBlank() || ownerId.isBlank()) return@mapNotNull null
+                VoteNotification(
+                    id = id,
+                    sessionId = sessionId,
+                    userId = ownerId,
+                    createdAtEpoch = row.getLong("created_at_epoch"),
+                    readAtEpoch = row.getLong("read_at_epoch").takeIf { it > 0 }
+                )
+            }
+        }.getOrElse { emptyList() }
+
+    override suspend fun markVoteNotificationsRead(sessionId: String, userId: String) {
+        if (sessionId.isBlank() || userId.isBlank()) return
+        val now = System.currentTimeMillis()
+        runCatching {
+            client.postgrest[voteNotificationsTable].update(
+                body = buildJsonObject { put("read_at_epoch", now) }
+            ) {
+                filter {
+                    eq("session_id", sessionId)
+                    eq("user_id", userId)
+                }
+            }
+        }
+    }
+
+    override suspend fun userDisplayName(userId: String): String? =
+        runCatching {
+            getUsernameById(userId).takeIf { it.isNotBlank() }
+        }.getOrElse { null }
+
     override suspend fun restaurantSelectionsByUserIds(userIds: Set<String>): Map<String, Set<String>> =
         runCatching {
             val filteredUsers = userIds.filter { it.isNotBlank() }
@@ -719,6 +802,7 @@ class PickDbRepository(
         if (id.isBlank()) return null
         val category = getString("category")
         val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
+        val reviewTagProfile = getDoubleMap("review_tag_profile")
         val dietaryFromDb = RestaurantClassification.profileFromLevels(
             vegan = getString("vegan_level"),
             vegetarian = getString("vegetarian_level"),
@@ -740,11 +824,11 @@ class PickDbRepository(
             rating = getDouble("rating"),
             isSaved = id in savedIds,
             location = getString("location", "Addis Ababa"),
-            isOpenNow = getBoolean("is_open_now", true),
             latitude = getDouble("latitude"),
             longitude = getDouble("longitude"),
             tags = tags,
             dietaryProfile = dietaryProfile,
+            reviewTagProfile = reviewTagProfile,
         )
     }
 
@@ -794,6 +878,9 @@ class PickDbRepository(
     private fun JsonObject.getDouble(key: String, fallback: Double = 0.0): Double =
         this[key]?.jsonPrimitive?.doubleOrNull ?: fallback
 
+    private fun JsonObject.getInt(key: String, fallback: Int = 0): Int =
+        this[key]?.jsonPrimitive?.intOrNull ?: fallback
+
     private fun JsonObject.getBoolean(key: String, fallback: Boolean = false): Boolean =
         this[key]?.jsonPrimitive?.booleanOrNull ?: fallback
 
@@ -811,6 +898,29 @@ class PickDbRepository(
                 element.contentOrNull?.takeIf { it.isNotBlank() }?.let { listOf(it) }.orEmpty()
             else -> emptyList()
         }
+    }
+
+    private fun JsonObject.getDoubleMap(key: String): Map<String, Double> {
+        val element = this[key] ?: return emptyMap()
+        if (element !is JsonObject) return emptyMap()
+        return element.mapNotNull { (k, v) ->
+            v.jsonPrimitive.doubleOrNull?.let { k to it }
+        }.toMap()
+    }
+
+    private fun JsonObject.toReview(): Review? {
+        val restaurantName = getString("restaurant_name")
+        if (restaurantName.isBlank()) return null
+        return Review(
+            id = getString("id", Random.nextInt(0, 1_000_000).toString()),
+            restaurantName = restaurantName,
+            tags = ReviewTagCatalog.normalizeTags(getStringList("tags")),
+            content = getString("content"),
+            rating = getInt("rating", 5),
+            userId = getString("user_id").takeIf { it.isNotBlank() },
+            username = getString("username").takeIf { it.isNotBlank() },
+            createdAt = getString("created_at").takeIf { it.isNotBlank() },
+        )
     }
 
     private suspend fun searchSignalsById(): Map<String, String> {

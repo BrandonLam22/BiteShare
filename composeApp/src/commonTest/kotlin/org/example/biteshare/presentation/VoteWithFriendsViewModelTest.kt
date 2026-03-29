@@ -85,7 +85,7 @@ class VoteWithFriendsViewModelTest {
     }
 
     @Test
-    fun finishVotingLocksFurtherChanges() = runMainTest {
+    fun finishVotingDoesNotCloseSession() = runMainTest {
         val vm = VoteWithFriendsViewModel(model, context, pollIntervalMs = 0)
         advanceUntilIdle()
         val firstRestaurant = vm.uiState.restaurants.first().id
@@ -94,9 +94,9 @@ class VoteWithFriendsViewModelTest {
         assertTrue(vm.isMySelection(firstRestaurant))
 
         vm.finishVoting()
-        assertTrue(vm.uiState.isVotingClosed)
+        assertFalse(vm.uiState.isVotingClosed)
 
         vm.toggleMyVote(firstRestaurant)
-        assertTrue(vm.isMySelection(firstRestaurant))
+        assertFalse(vm.isMySelection(firstRestaurant))
     }
 }

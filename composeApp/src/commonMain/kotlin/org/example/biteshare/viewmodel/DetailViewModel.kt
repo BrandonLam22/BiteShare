@@ -9,6 +9,7 @@ import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.Review
+import org.example.biteshare.domain.ReviewTagCatalog
 
 enum class MealTab { Lunch, Dinner, Brunch }
 
@@ -61,13 +62,13 @@ class DetailViewModel(
                 // Supabase reviews are merged in ahead of fallback reviews, so keep this order.
                 reviewHighlights = reviews.take(3),
                 popularReviewTags = reviews
-                    .flatMap { it.tags }
+                    .flatMap { ReviewTagCatalog.normalizeTags(it.tags) }
                     .groupingBy { it }
                     .eachCount()
                     .toList()
                     .sortedByDescending { (_, count) -> count }
                     .take(4)
-                    .map { (tag, _) -> tag },
+                    .map { (tag, _) -> ReviewTagCatalog.labelFor(tag) },
             )
         }
     }
