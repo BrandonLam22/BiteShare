@@ -124,11 +124,12 @@ fun AppRoot(
     val privacyVm = remember(repo) { PrivacyViewModel(repo) }
     val helpVm = remember(repo) { HelpViewModel(repo) }
     val editProfileVm = remember(repo) { EditProfileViewModel(repo) }
-    val reviewVm = remember(model, repo) { ReviewViewModel(model, repo) }
+
     val friendsListVm = remember(repo) { FriendsListViewModel(repo) }
     val changePasswordVm = remember(repo) { ChangePasswordViewModel(repo) }
     val friendRequestsVm = remember(repo) { FriendRequestsViewModel(repo) }
     val reviewsListVm = remember(repo) { ReviewsListViewModel(repo) }
+    val reviewVm = remember(model, repo) { ReviewViewModel(model, repo) }
 
 
     Scaffold(

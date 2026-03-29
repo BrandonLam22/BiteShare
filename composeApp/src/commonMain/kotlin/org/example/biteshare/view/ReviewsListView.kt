@@ -19,6 +19,9 @@ class ReviewsListView(
     @Composable
     fun Content() {
         val s = vm.uiState
+        LaunchedEffect(Unit) {
+            vm.refresh()
+        }
         var reviewToDelete by remember { mutableStateOf<String?>(null) }
         var reviewToEdit by remember { mutableStateOf<String?>(null) }
 

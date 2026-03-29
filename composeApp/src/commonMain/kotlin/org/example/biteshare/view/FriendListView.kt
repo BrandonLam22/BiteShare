@@ -245,7 +245,7 @@ class FriendsListView(
             // 🔥 Reviews Header
             item {
                 Text(
-                    text = "Reviews (${friendDetails.reviews.size})",
+                    text = "Recent Reviews (${friendDetails.reviews.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )

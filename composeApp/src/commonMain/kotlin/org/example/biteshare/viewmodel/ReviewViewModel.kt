@@ -16,6 +16,8 @@ import kotlin.time.Clock
 class ReviewViewModel(
     private val model: Model,
     private val repo: BiteShareRepository = FakeRepository(model),
+
+
 ) {
     private val scope = MainScope()
 
@@ -181,6 +183,7 @@ class ReviewViewModel(
             }.onSuccess {
                 resetForm()
                 postStatusMessage = "Review posted successfully."
+
             }.onFailure { error ->
                 postErrorMessage = error.message ?: "Failed to post review."
             }

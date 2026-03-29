@@ -46,4 +46,10 @@ class ReviewsListViewModel(
             loadReviews()
         }
     }
+    fun refresh() {
+        scope.launch {
+            val reviews = repo.getUserReviews()
+            uiState = uiState.copy(reviews = reviews)
+        }
+    }
 }

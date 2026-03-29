@@ -871,9 +871,10 @@ class SupabaseRepository(
             val reviews = client.from(reviewsTable)
                 .select {
                     filter { eq("user_id", friendId) }
-                    limit(5)
                 }
                 .decodeList<Review>()
+                .sortedByDescending { it.createdAt }  // ✅ sort newest first
+                .take(5)
             println(reviews)
 
             val savedRestaurants = client.from(userSavedRestaurantsTable)
