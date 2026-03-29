@@ -65,8 +65,8 @@ fun SignupView(viewModel: SignupViewModel,
                 },
                 singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .height(55.dp),
+                    .fillMaxWidth(0.9f),
+                    // .height(55.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFF7A00),
                     unfocusedBorderColor = Color(0xFFFF8C00),
@@ -87,8 +87,7 @@ fun SignupView(viewModel: SignupViewModel,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(top = 5.dp)
-                    .height(55.dp),
+                    .padding(top = 5.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFF7A00),
                     unfocusedBorderColor = Color(0xFFFF8C00),
@@ -108,8 +107,7 @@ fun SignupView(viewModel: SignupViewModel,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(top = 5.dp)
-                    .height(55.dp),
+                    .padding(top = 5.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFF7A00),
                     unfocusedBorderColor = Color(0xFFFF8C00),

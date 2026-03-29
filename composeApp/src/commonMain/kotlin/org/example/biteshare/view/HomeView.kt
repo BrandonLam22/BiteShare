@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,9 @@ import org.jetbrains.compose.resources.painterResource
 
 import biteshare.composeapp.generated.resources.Res
 import biteshare.composeapp.generated.resources.local_home
+
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
 
 private val categoryEmoji = mapOf(
     "local" to "L",
@@ -91,9 +95,14 @@ class HomeView(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Hi, Weclome to BiteShare.",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "Biteshare",
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = Color(0xFFFF7A00),
                     )
                     if (s.isLoading) {
                         Spacer(Modifier.height(4.dp))
@@ -241,6 +250,7 @@ class HomeView(
                             FriendSearchResultCard(
                                 friend = friend,
                                 isFriend = friend.id in s.currentFriendIds,
+                                isPending = friend.id in s.outgoingRequestUserIds,
                                 enabled = !s.isFriendActionLoading,
                                 onToggle = { vm.toggleFriend(friend) }
                             )
@@ -512,6 +522,7 @@ class HomeView(
     private fun FriendSearchResultCard(
         friend: Friend,
         isFriend: Boolean,
+        isPending: Boolean,
         enabled: Boolean,
         onToggle: () -> Unit,
     ) {
@@ -554,10 +565,16 @@ class HomeView(
                 }
                 FilledTonalButton(
                     onClick = onToggle,
-                    enabled = enabled,
+                    enabled = enabled && !isPending,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Text(if (isFriend) "−" else "+")
+                    Text(
+                        when {
+                            isFriend -> "-"
+                            isPending -> "Requested"
+                            else -> "+"
+                        }
+                    )
                 }
             }
         }

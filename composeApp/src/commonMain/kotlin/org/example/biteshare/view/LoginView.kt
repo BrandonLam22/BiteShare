@@ -64,8 +64,7 @@ fun LoginView(viewModel: LoginViewModel,
                 },
                 singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .height(55.dp),
+                    .fillMaxWidth(0.9f),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFF7A00),
                     unfocusedBorderColor = Color(0xFFFF8C00),
@@ -86,8 +85,7 @@ fun LoginView(viewModel: LoginViewModel,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(top = 10.dp)
-                    .height(55.dp),
+                    .padding(top = 10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFF7A00),
                     unfocusedBorderColor = Color(0xFFFF8C00),

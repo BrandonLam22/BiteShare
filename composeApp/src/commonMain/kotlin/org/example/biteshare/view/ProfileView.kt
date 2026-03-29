@@ -20,6 +20,7 @@ class ProfileView(
     private val onLogout: () -> Unit,
     private val onEditProfile: () -> Unit,
     private val onFriendsList: () -> Unit,
+    private val onFriendRequests: () -> Unit,
 ) {
 
     @Composable
@@ -118,6 +119,12 @@ class ProfileView(
             )
 
             Spacer(Modifier.height(16.dp))
+
+            MenuItem(
+                icon = "👥",
+                text = "Friend Requests (${s.incomingRequestCount})",
+                onClick = onFriendRequests
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
