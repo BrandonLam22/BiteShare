@@ -279,14 +279,15 @@ class ReviewsListView(
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        (1..5).forEach { star ->
+                        (1..10).forEach { star ->
                             TextButton(
                                 onClick = { rating = star },
                                 colors = ButtonDefaults.textButtonColors(
-                                    contentColor = if (star <= rating) {
+                                    contentColor = if (star == rating) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -294,8 +295,9 @@ class ReviewsListView(
                                 )
                             ) {
                                 Text(
-                                    text = "⭐",
-                                    style = MaterialTheme.typography.titleLarge
+                                    text = star.toString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
