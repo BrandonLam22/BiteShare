@@ -69,7 +69,10 @@ private enum class Tab { Home, Review, Pick, Profile }
 private sealed class HomeRoute {
     data object Main : HomeRoute()
     data object Browse : HomeRoute()
-    data class Detail(val restaurantId: String) : HomeRoute()
+    data class Detail(
+        val restaurantId: String,
+        val origin: String // "browse", "saved", etc.
+    ) : HomeRoute()
 }
 
 private sealed class PickRoute {
@@ -201,7 +204,9 @@ fun AppRoot(
                             BrowseView(
                                 vm = browseVm,
                                 onBack = { homeRoute = HomeRoute.Main },
-                                onRestaurantClick = { id -> homeRoute = HomeRoute.Detail(id) }
+                                onRestaurantClick = { id ->
+                                    homeRoute = HomeRoute.Detail(id, origin = "browse")
+                                }
                             ).Content()
                         }
 
@@ -211,7 +216,20 @@ fun AppRoot(
                             }
                             DetailView(
                                 vm = detailVm,
-                                onBack = { homeRoute = HomeRoute.Browse }
+                                onBack = {
+                                    when (route.origin) {
+                                        "saved" -> {
+                                            tab = Tab.Profile
+                                            profileRoute = ProfileRoute.Saved
+                                        }
+                                        "browse" -> {
+                                            homeRoute = HomeRoute.Browse
+                                        }
+                                        else -> {
+                                            homeRoute = HomeRoute.Main
+                                        }
+                                    }
+                                }
                             ).Content()
                         }
                     }
@@ -410,6 +428,13 @@ fun AppRoot(
                                     vm = savedVm,
                                     onBack = {
                                         profileRoute = ProfileRoute.Main
+                                    },
+                                    onRestaurantClick = { restaurant ->
+                                        tab = Tab.Home
+                                        homeRoute = HomeRoute.Detail(
+                                            restaurantId = restaurant.id,
+                                            origin = "saved"
+                                        )
                                     }
                                 )
                             }

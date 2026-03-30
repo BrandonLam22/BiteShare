@@ -10,11 +10,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.biteshare.domain.Restaurant
 import org.example.biteshare.viewmodel.SavedViewModel
 
 class SavedView(
     private val vm: SavedViewModel,
     private val onBack: () -> Unit = {},
+    private val onRestaurantClick: (Restaurant) -> Unit
 ) {
     @Composable
     fun Content() {
@@ -65,7 +67,8 @@ class SavedView(
                         price = restaurant.price,
                         eta = restaurant.eta,
                         rating = restaurant.rating,
-                        onToggleSaved = { vm.toggleSaved(restaurant.id) }
+                        onToggleSaved = { vm.toggleSaved(restaurant.id) },
+                        onClick = { onRestaurantClick(restaurant) }
                     )
                 }
             }
@@ -139,10 +142,12 @@ class SavedView(
         eta: String,
         rating: Double,
         onToggleSaved: () -> Unit,
+        onClick: () -> Unit,
     ) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onClick,
         ) {
             Column {
                 Box(
