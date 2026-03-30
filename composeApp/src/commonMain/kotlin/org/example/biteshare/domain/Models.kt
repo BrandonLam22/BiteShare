@@ -353,7 +353,8 @@ class PickModel(
         budget: BudgetFilter,
     ): Boolean {
         val maxPrice = budget.maxPrice ?: return true
-        return priceValue(restaurant.price) <= maxPrice
+        val value = priceValue(restaurant.price) ?: return true
+        return value <= maxPrice
     }
 
     private fun matchesDistance(
@@ -399,13 +400,22 @@ class PickModel(
         cuisine: CuisineFilter,
     ): Boolean {
         if (cuisine == CuisineFilter.ANY) return true
-        val tags = if (restaurant.tags.isNotEmpty()) {
-            restaurant.tags
-        } else {
-            setOf(RestaurantClassification.normalizeTag(restaurant.category))
-        }
+        val normalizedCategory = RestaurantClassification.normalizeTag(restaurant.category)
+        val categoryTokens = normalizedCategory
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .toSet()
+        val tags = restaurant.tags
+            .map { RestaurantClassification.normalizeTag(it) }
+            .filter { it.isNotBlank() }
+            .toSet()
+            .ifEmpty { setOf(normalizedCategory) }
+        val expandedTags = tags + categoryTokens + normalizedCategory
         val requiredTags = cuisineTags(cuisine)
-        return requiredTags.any { tag -> tag in tags }
+        return requiredTags.any { tag ->
+            val normalizedTag = RestaurantClassification.normalizeTag(tag)
+            normalizedTag in expandedTags || normalizedCategory.contains(normalizedTag)
+        }
     }
 
     private fun cuisineTags(cuisine: CuisineFilter): Set<String> =
@@ -426,8 +436,49 @@ class PickModel(
             CuisineFilter.VIETNAMESE -> setOf("vietnamese")
         }
 
-    private fun priceValue(rawPrice: String): Double =
-        rawPrice.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: Double.MAX_VALUE
+    private fun priceValue(rawPrice: String): Double? {
+        val trimmed = rawPrice.trim()
+        if (trimmed.isBlank()) return null
+        val lower = trimmed.lowercase()
+
+        val priceLevel = Regex("price[_ ]?level[_ ]?(\\d)")
+            .find(lower)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+        if (priceLevel != null) {
+            return when (priceLevel) {
+                0 -> 0.0
+                1 -> 10.0
+                2 -> 20.0
+                3 -> 60.0
+                4 -> 80.0
+                else -> null
+            }
+        }
+
+        val dollarCount = trimmed.count { it == '$' }
+        if (dollarCount > 0) {
+            return when (dollarCount) {
+                1 -> 10.0
+                2 -> 20.0
+                3 -> 60.0
+                else -> 80.0
+            }
+        }
+
+        Regex("(\\d+(?:\\.\\d+)?)\\s*[-–]\\s*(\\d+(?:\\.\\d+)?)")
+            .find(lower)
+            ?.let { match ->
+                return match.groupValues.getOrNull(2)?.toDoubleOrNull()
+            }
+
+        return Regex("(\\d+(?:\\.\\d+)?)")
+            .find(lower)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toDoubleOrNull()
+    }
 
     private suspend fun rankForMode(
         restaurants: List<Restaurant>,
