@@ -12,6 +12,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import org.example.biteshare.domain.FeaturedItem
 import org.example.biteshare.domain.Friend
@@ -35,9 +36,12 @@ class PickDbRepository(
     private val client: SupabaseClient = SupabaseClientProvider.client,
     private val userIdProvider: () -> String? = { null },
 ) : PickRepository {
-    private val restaurantsTable = "restaurants2"
+    // Prefer the candidate app read model for display, but keep legacy-only rows available
+    // so existing saved/vote/detail flows do not disappear during the staged migration.
+    private val legacyRestaurantsTable = "restaurants2"
+    private val appReadModelTable = "google_maps_places_app"
+    private val legacyRestaurantDetailsTable = "restaurant_details"
     private val friendsTable = "friends"
-    private val restaurantDetailsTable = "restaurant_details"
     private val featuredItemsTable = "featured_items"
     private val userSavedRestaurantsTable = "user_saved_restaurants"
     private val reviewsTable = "reviews"
@@ -415,22 +419,12 @@ class PickDbRepository(
     override suspend fun restaurants(): List<Restaurant> =
         runCatching {
             val savedIds = fetchSelectionsForUser(effectiveUserId())
-            val raw = client.postgrest[restaurantsTable]
-                .select(Columns.raw("*"))
-                .decodeList<JsonObject>()
+            val raw = loadRestaurantRows()
             raw.mapNotNull { it.toRestaurant(savedIds) }
         }.getOrElse { emptyList() }
 
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? =
         runCatching {
-            val detailRow = client.postgrest[restaurantDetailsTable]
-                .select(Columns.raw("*")) {
-                    filter { eq("restaurant_id", id) }
-                    limit(1)
-                }
-                .decodeList<JsonObject>()
-                .firstOrNull()
-                ?: return@runCatching null
             val featuredItems = client.postgrest[featuredItemsTable]
                 .select(Columns.raw("restaurant_id, name, price, description")) {
                     filter { eq("restaurant_id", id) }
@@ -438,6 +432,7 @@ class PickDbRepository(
                 .decodeList<JsonObject>()
                 .mapNotNull { it.toFeaturedItem() }
             val summary = restaurants().firstOrNull { it.id == id }
+            val detailRow = loadAppReadModelRow(id) ?: loadLegacyDetailRow(id) ?: return@runCatching null
             detailRow.toRestaurantDetail(summary, featuredItems)
         }.getOrElse { null }
 
@@ -791,6 +786,50 @@ class PickDbRepository(
         }.toSet()
     }
 
+    private suspend fun loadRestaurantRows(): List<JsonObject> {
+        val appRows = runCatching {
+            client.postgrest[appReadModelTable]
+                .select(Columns.raw("*"))
+                .decodeList<JsonObject>()
+        }.getOrDefault(emptyList())
+        val legacyRows = runCatching {
+            client.postgrest[legacyRestaurantsTable]
+                .select(Columns.raw("*"))
+                .decodeList<JsonObject>()
+        }.getOrDefault(emptyList())
+        if (appRows.isEmpty()) return legacyRows
+        if (legacyRows.isEmpty()) return appRows
+
+        val appIds = appRows.mapNotNull { row -> row.getString("id").takeIf { it.isNotBlank() } }.toSet()
+        val legacyOnlyRows = legacyRows.filter { row ->
+            val id = row.getString("id")
+            id.isBlank() || id !in appIds
+        }
+        return appRows + legacyOnlyRows
+    }
+
+    private suspend fun loadLegacyDetailRow(id: String): JsonObject? =
+        runCatching {
+            client.postgrest[legacyRestaurantDetailsTable]
+                .select(Columns.raw("*")) {
+                    filter { eq("restaurant_id", id) }
+                    limit(1)
+                }
+                .decodeList<JsonObject>()
+                .firstOrNull()
+        }.getOrNull()
+
+    private suspend fun loadAppReadModelRow(id: String): JsonObject? =
+        runCatching {
+            client.postgrest[appReadModelTable]
+                .select(Columns.raw("*")) {
+                    filter { eq("id", id) }
+                    limit(1)
+                }
+                .decodeList<JsonObject>()
+                .firstOrNull()
+        }.getOrNull()
+
     private fun buildSelectionPayload(userId: String, restaurantId: String): JsonObject =
         buildJsonObject {
             put("user_id", userId)
@@ -800,7 +839,7 @@ class PickDbRepository(
     private fun JsonObject.toRestaurant(savedIds: Set<String>): Restaurant? {
         val id = getString("id")
         if (id.isBlank()) return null
-        val category = getString("category")
+        val category = getString("category_name").ifBlank { getString("category") }
         val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
         val reviewTagProfile = getDoubleMap("review_tag_profile")
         val dietaryFromDb = RestaurantClassification.profileFromLevels(
@@ -817,15 +856,16 @@ class PickDbRepository(
         }
         return Restaurant(
             id = id,
-            name = getString("name"),
+            name = getString("name").ifBlank { getString("title") },
             category = category,
-            price = getString("price"),
-            eta = getString("eta"),
+            price = getString("price").ifBlank { getString("price_range") },
+            eta = getString("eta").ifBlank { "ETA unavailable" },
             rating = getDouble("rating"),
             isSaved = id in savedIds,
-            location = getString("location", "Addis Ababa"),
+            location = getString("city").ifBlank { getString("location", "Addis Ababa") },
             latitude = getDouble("latitude"),
             longitude = getDouble("longitude"),
+            imageUrl = getString("image_url").takeIf { it.isNotBlank() },
             tags = tags,
             dietaryProfile = dietaryProfile,
             reviewTagProfile = reviewTagProfile,
@@ -846,16 +886,39 @@ class PickDbRepository(
         summary: Restaurant?,
         featuredItems: List<FeaturedItem>,
     ): RestaurantDetail {
-        val id = getString("restaurant_id")
-        val name = getString("name").ifBlank { summary?.name.orEmpty() }
-        val city = getString("city").ifBlank { summary?.location ?: "Unknown" }
+        val id = getString("id").ifBlank { getString("restaurant_id") }
+        val name = getString("name").ifBlank { getString("title") }.ifBlank { summary?.name.orEmpty() }
+        val city = getString("city").ifBlank { getString("location") }.ifBlank { summary?.location ?: "Unknown" }
         val address = getString("address")
             .ifBlank { summary?.name?.let { "$it, $city" }.orEmpty() }
-        val distance = getString("distance")
+        val distance = getString("distance").ifBlank { "Distance unavailable" }
+        val imageUrl = getString("image_url")
+        val fromList = getStringList("images")
+        val images = buildList {
+            addAll(fromList)
+            imageUrl.takeIf { it.isNotBlank() }?.let { u ->
+                if (none { it == u }) add(u)
+            }
+        }.distinct()
+        val resolvedImages = if (images.isEmpty()) {
+            RestaurantClassification.defaultDetailImageKeys(
+                getString("category_name").ifBlank { getString("category") }
+                    .ifBlank { summary?.category.orEmpty() },
+            )
+        } else {
+            images
+        }
+        val attributes = getStringList("attributes").ifEmpty {
+            listOfNotNull(
+                summary?.category?.takeIf { it.isNotBlank() },
+                getString("category_name").takeIf { it.isNotBlank() },
+                getString("category").takeIf { it.isNotBlank() }
+            ).distinct()
+        }
         return RestaurantDetail(
             restaurantId = id,
             name = name,
-            images = getStringList("images"),
+            images = resolvedImages,
             featuredItems = featuredItems,
             location = RestaurantLocation(
                 city = city,
@@ -863,12 +926,14 @@ class PickDbRepository(
                 distance = distance,
             ),
             reviews = emptyList(),
-            description = getString("description"),
+            description = getString("description").ifBlank {
+                summary?.let { "${it.name} is known for ${it.category.lowercase()}." }.orEmpty()
+            },
             rating = getDouble("rating", summary?.rating ?: 0.0),
-            attributes = getStringList("attributes"),
-            googleMapsLink = getFirstString("google_maps_link"),
-            restaurantWebsite = getFirstString("restaurant_website"),
-            priceRange = getString("price_range", summary?.price ?: "$$"),
+            attributes = attributes,
+            googleMapsLink = getFirstString("google_maps_url", "google_maps_link", "url"),
+            restaurantWebsite = getFirstString("website", "restaurant_website"),
+            priceRange = getString("price_range").ifBlank { getString("price", summary?.price ?: "$$") },
         )
     }
 
@@ -911,14 +976,24 @@ class PickDbRepository(
     private fun JsonObject.toReview(): Review? {
         val restaurantName = getString("restaurant_name")
         if (restaurantName.isBlank()) return null
+        val source = getFirstString("source", "review_source")?.lowercase()?.trim()
+        if (!source.isNullOrBlank() && (source == "google" || source.contains("google"))) return null
+        if (getBoolean("is_google") || getBoolean("is_google_review")) return null
+
+        val uid = getString("user_id").takeIf { it.isNotBlank() }
+        val usernameCol = getString("username").takeIf { it.isNotBlank() }
+        val displayName = usernameCol
+            ?: getFirstString("reviewer_name", "author_name", "author", "reviewer_display_name", "review_author")
+                ?.takeIf { it.isNotBlank() }
+
         return Review(
             id = getString("id", Random.nextInt(0, 1_000_000).toString()),
             restaurantName = restaurantName,
             tags = ReviewTagCatalog.normalizeTags(getStringList("tags")),
             content = getString("content"),
             rating = getInt("rating", 5),
-            userId = getString("user_id").takeIf { it.isNotBlank() },
-            username = getString("username").takeIf { it.isNotBlank() },
+            userId = uid,
+            username = displayName,
             createdAt = getString("created_at").takeIf { it.isNotBlank() },
         )
     }
@@ -926,9 +1001,20 @@ class PickDbRepository(
     private suspend fun searchSignalsById(): Map<String, String> {
         searchSignalCache?.let { return it }
         val cache = runCatching {
-            val detailRows = client.postgrest[restaurantDetailsTable]
-                .select(Columns.raw("restaurant_id, description, attributes"))
-                .decodeList<JsonObject>()
+            val appRows = runCatching {
+                client.postgrest[appReadModelTable]
+                    .select(Columns.raw("id, description, attributes"))
+                    .decodeList<JsonObject>()
+            }.getOrDefault(emptyList())
+            val legacyDetailRows = runCatching {
+                client.postgrest[legacyRestaurantDetailsTable]
+                    .select(Columns.raw("restaurant_id, description, attributes"))
+                    .decodeList<JsonObject>()
+            }.getOrDefault(emptyList())
+            val detailRows = appRows + legacyDetailRows.filter { row ->
+                val id = row.getString("restaurant_id")
+                id.isNotBlank() && appRows.none { app -> app.getString("id") == id }
+            }
             val featuredRows = client.postgrest[featuredItemsTable]
                 .select(Columns.raw("restaurant_id, name, description"))
                 .decodeList<JsonObject>()
@@ -945,7 +1031,7 @@ class PickDbRepository(
                 .groupBy({ it.first }, { it.second })
 
             detailRows.mapNotNull { row ->
-                val restaurantId = row.getString("restaurant_id")
+                val restaurantId = row.getString("restaurant_id").ifBlank { row.getString("id") }
                 if (restaurantId.isBlank()) return@mapNotNull null
                 val description = normalizeSignal(row.getString("description"))
                 val attributes = normalizeSignal(row.getStringList("attributes").joinToString(" "))

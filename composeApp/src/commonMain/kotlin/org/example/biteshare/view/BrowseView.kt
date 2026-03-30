@@ -1,5 +1,6 @@
 package org.example.biteshare.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,13 +13,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.viewmodel.BrowseViewModel
+import org.jetbrains.compose.resources.painterResource
 
 class BrowseView(
     private val vm: BrowseViewModel,
@@ -190,12 +194,35 @@ class BrowseView(
                             .align(Alignment.TopEnd)
                             .padding(12.dp)
                     )
-                    // Placeholder image content
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text("🍴", style = MaterialTheme.typography.displayMedium)
+                    when {
+                        !restaurant.imageUrl.isNullOrBlank() -> {
+                            RestaurantDetailImage(
+                                imageRef = restaurant.imageUrl!!,
+                                contentDescription = restaurant.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                        else -> {
+                            val res = imageResByKey(
+                                RestaurantClassification.categoryLabelToImageKey(restaurant.category),
+                            )
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                if (res != null) {
+                                    Image(
+                                        painter = painterResource(res),
+                                        contentDescription = restaurant.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    Text("🍴", style = MaterialTheme.typography.displayMedium)
+                                }
+                            }
+                        }
                     }
                 }
                 // Info row

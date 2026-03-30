@@ -134,6 +134,8 @@ data class Restaurant(
     val location: String = "Addis Ababa",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
+    /** Primary photo URL from `google_maps_places_app.image_url` when present. */
+    val imageUrl: String? = null,
     val tags: Set<String> = emptySet(),
     val dietaryProfile: DietaryProfile = DietaryProfile(),
     val reviewTagProfile: Map<String, Double> = emptyMap(),

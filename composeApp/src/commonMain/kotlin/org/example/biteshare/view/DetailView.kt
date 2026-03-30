@@ -1,6 +1,5 @@
 package org.example.biteshare.view
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -26,21 +25,6 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import org.example.biteshare.domain.ReviewTagCatalog
 import org.example.biteshare.viewmodel.DetailViewModel
-import org.example.biteshare.viewmodel.MealTab
-import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.painterResource
-import biteshare.composeapp.generated.resources.Res
-import biteshare.composeapp.generated.resources.beyayenet_home
-import biteshare.composeapp.generated.resources.breakfast_home
-import biteshare.composeapp.generated.resources.capo_chino_home
-import biteshare.composeapp.generated.resources.chesse_burger_home
-import biteshare.composeapp.generated.resources.coffee_home
-import biteshare.composeapp.generated.resources.drink_home
-import biteshare.composeapp.generated.resources.fast_food_home
-import biteshare.composeapp.generated.resources.local_home
-import biteshare.composeapp.generated.resources.milkshake_home
-import biteshare.composeapp.generated.resources.pizza_home
-
 class DetailView(
     private val vm: DetailViewModel,
     private val onBack: () -> Unit,
@@ -104,13 +88,12 @@ class DetailView(
             ) {
                 val imageKeys = detail?.images.orEmpty()
                 val selectedKey = imageKeys.getOrNull(selectedImageIndex)
-                val selectedImageRes = selectedKey?.let(::imageResByKey)
-                if (selectedImageRes != null) {
-                    Image(
-                        painter = painterResource(selectedImageRes),
+                if (selectedKey != null) {
+                    RestaurantDetailImage(
+                        imageRef = selectedKey,
                         contentDescription = "${restaurant.name} image",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     )
                 } else {
                     Box(
@@ -135,7 +118,6 @@ class DetailView(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         detail!!.images.forEachIndexed { index, key ->
-                            val thumbRes = imageResByKey(key)
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 border = androidx.compose.foundation.BorderStroke(
@@ -150,21 +132,12 @@ class DetailView(
                                     .size(64.dp)
                                     .clickable { selectedImageIndex = index }
                             ) {
-                                if (thumbRes != null) {
-                                    Image(
-                                        painter = painterResource(thumbRes),
-                                        contentDescription = "${restaurant.name} thumbnail ${index + 1}",
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        Text("🍽️")
-                                    }
-                                }
+                                RestaurantDetailImage(
+                                    imageRef = key,
+                                    contentDescription = "${restaurant.name} thumbnail ${index + 1}",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
                             }
                         }
                     }
@@ -178,13 +151,16 @@ class DetailView(
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(6.dp))
-                // Rating + reviews
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text("⭐", style = MaterialTheme.typography.bodyMedium)
-                    val displayRating = if (s.reviewCount > 0) s.averageReviewScore else restaurant.rating
+                    val displayRating = when {
+                        s.reviewHighlights.isNotEmpty() -> s.averageReviewScore
+                        (detail?.rating ?: 0.0) > 0.0 -> detail!!.rating
+                        else -> restaurant.rating
+                    }
                     Text(
                         text = "${displayRating.formatOneDecimal()} • ${s.reviewCount} reviews",
                         style = MaterialTheme.typography.bodyMedium,
@@ -363,82 +339,9 @@ class DetailView(
 
                 Spacer(Modifier.height(sectionSpacing))
 
-                // Meal tabs: Lunch, Dinner, Brunch
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    MealTab.entries.forEach { tab ->
-                        val selected = s.selectedMeal == tab
-                        Button(
-                            onClick = { vm.selectMeal(tab) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(tab.name)
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(itemSpacing))
-
-                // Time slots horizontal scroll
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    s.timeSlots.forEach { time ->
-                        OutlinedButton(
-                            onClick = { vm.selectTimeSlot(time) },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (s.selectedTimeSlot == time) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                }
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(time, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(itemSpacing))
-
-                s.selectedTimeSlot?.let { selected ->
-                    Text(
-                        text = "Selected time: $selected (${s.selectedMeal.name})",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(itemSpacing))
-                }
-
-                Button(
-                    onClick = { },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("See All Available Times")
-                }
-
                 if (s.reviewHighlights.isNotEmpty()) {
-                    Spacer(Modifier.height(sectionSpacing))
                     Text(
-                        text = "Recent Reviews",
+                        text = "Reviews",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -458,7 +361,7 @@ class DetailView(
                                     ) {
                                         Column {
                                             Text(
-                                                text = review.username ?: "Anonymous Reviewer",
+                                                text = review.username ?: "Anonymous",
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.SemiBold
                                             )
@@ -468,16 +371,21 @@ class DetailView(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                        Surface(
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
-                                            Text(
-                                                text = "${review.rating}/10",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(14.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer
+                                            ) {
+                                                Text(
+                                                    text = review.ratingLabel(),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                )
+                                            }
                                         }
                                     }
                                     Spacer(Modifier.height(8.dp))
@@ -509,22 +417,6 @@ class DetailView(
 
                 Spacer(Modifier.height(32.dp))
             }
-        }
-    }
-
-    private fun imageResByKey(key: String): DrawableResource? {
-        return when (key.lowercase()) {
-            "pizza_home" -> Res.drawable.pizza_home
-            "chesse_burger_home" -> Res.drawable.chesse_burger_home
-            "coffee_home" -> Res.drawable.coffee_home
-            "milkshake_home" -> Res.drawable.milkshake_home
-            "capo_chino_home" -> Res.drawable.capo_chino_home
-            "beyayenet_home" -> Res.drawable.beyayenet_home
-            "local_home" -> Res.drawable.local_home
-            "fast_food_home" -> Res.drawable.fast_food_home
-            "drink_home" -> Res.drawable.drink_home
-            "breakfast_home" -> Res.drawable.breakfast_home
-            else -> null
         }
     }
 

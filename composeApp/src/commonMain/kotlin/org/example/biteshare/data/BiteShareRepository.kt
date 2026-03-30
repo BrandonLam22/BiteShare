@@ -21,7 +21,7 @@ interface BiteShareRepository : PickRepository {
     suspend fun searchRestaurants(query: String, source: List<Restaurant> = emptyList()): List<Restaurant>
     suspend fun getRestaurantById(id: String): Restaurant?
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail?
-    suspend fun getReviewsForRestaurant(restaurantName: String): List<Review>
+    suspend fun getReviewsForRestaurant(restaurantName: String, restaurantId: String? = null): List<Review>
     suspend fun submitReview(review: Review)
     suspend fun getSavedRestaurants(): List<Restaurant>
     suspend fun toggleSaved(restaurantId: String)

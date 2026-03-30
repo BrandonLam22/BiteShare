@@ -116,6 +116,9 @@ create table public.user_saved_restaurants (
     constraint user_saved_restaurants_user_id_fkey foreign KEY (user_id) references users (id) on update CASCADE on delete CASCADE
 ) TABLESPACE pg_default;
 
+-- Optional columns used by Google-imported snippets (see app Review.source / reviewer fields):
+--   source text null,
+--   reviewer_name text null,
 create table public.reviews (
     id text not null,
     restaurant_id text null,

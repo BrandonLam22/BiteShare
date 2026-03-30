@@ -21,4 +21,8 @@ data class Review(
     val createdAt: String? = null,
     @SerialName("modified_at")
     val modifiedAt: String? = null,
-)
+) {
+    fun ratingForAverage(): Double = rating.toDouble().coerceIn(0.0, 10.0)
+
+    fun ratingLabel(): String = "$rating/10"
+}

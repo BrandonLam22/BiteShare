@@ -25,13 +25,11 @@ import androidx.compose.ui.unit.dp
 import org.example.biteshare.domain.CategoryItem
 import org.example.biteshare.domain.Friend
 import org.example.biteshare.domain.PopularItem
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.viewmodel.HomeSearchMode
 import org.example.biteshare.viewmodel.HomeViewModel
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
-
-import biteshare.composeapp.generated.resources.Res
-import biteshare.composeapp.generated.resources.local_home
 
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
@@ -43,12 +41,9 @@ private val categoryEmoji = mapOf(
     "breakfast" to "B",
 )
 
-private fun categoryImageRes(label: String): DrawableResource? {
-    return Res.drawable.local_home
-}
-
-private fun popularImageRes(title: String): DrawableResource? {
-    return Res.drawable.local_home
+private fun drawableForHomeLabel(label: String): DrawableResource? {
+    val key = RestaurantClassification.categoryLabelToImageKey(label)
+    return imageResByKey(key)
 }
 
 class HomeView(
@@ -442,7 +437,7 @@ class HomeView(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val imageRes = categoryImageRes(item.label)
+                    val imageRes = drawableForHomeLabel(item.label)
                     if (imageRes == null) {
                         Text(emoji, style = MaterialTheme.typography.headlineSmall)
                     } else {
@@ -482,7 +477,7 @@ class HomeView(
                         .height(100.dp)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    val imageRes = popularImageRes(item.title)
+                    val imageRes = drawableForHomeLabel(item.title)
                     if (imageRes == null) {
                         Box(
                             contentAlignment = Alignment.Center,

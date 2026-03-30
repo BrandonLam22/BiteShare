@@ -145,7 +145,10 @@ class SupabaseRepository(
 
     }
 
+    // Prefer the candidate app read model for browse/detail display, while keeping legacy-only
+    // rows in the merged result so current saved/vote/comment flows do not disappear mid-migration.
     private val restaurantsTable = "restaurants2"
+    private val appReadModelTable = "google_maps_places_app"
 
     override suspend fun getHomeFeed(userName: String): HomeFeed {
         val restaurants = restaurants()
@@ -228,12 +231,7 @@ class SupabaseRepository(
         val needle = query.lowercase().trim()
         val pool = if (source.isNotEmpty()) source else restaurants()
         if (needle.isBlank()) return pool
-        val detailsByRestaurantId = runCatching {
-            client.postgrest["restaurant_details"]
-                .select(Columns.raw("restaurant_id, description, attributes"))
-                .decodeList<JsonObject>()
-                .associateBy { row -> row.getString("restaurant_id") }
-        }.getOrDefault(emptyMap())
+        val detailsByRestaurantId = loadSearchDetailsByRestaurantId()
 
         return pool.filter { restaurant ->
             val detail = detailsByRestaurantId[restaurant.id]
@@ -255,12 +253,18 @@ class SupabaseRepository(
 
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
         val summary = getRestaurantById(id) ?: return null
+        val dbDetail = pickDbRepo.getRestaurantDetailById(id)
         val fallbackDetail = fallback.getRestaurantDetailById(id)
-        val reviews = getReviewsForRestaurant(summary.name)
-        val baseDetail = fallbackDetail ?: buildRestaurantDetail(summary)
+        val reviews = getReviewsForRestaurant(summary.name, summary.id)
+        val baseDetail = dbDetail ?: fallbackDetail ?: buildRestaurantDetail(summary)
         val mergedReviews = (reviews + baseDetail.reviews)
             .distinctBy { it.id }
-        val averageRating = mergedReviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: baseDetail.rating
+        val averageRating = when {
+            mergedReviews.isNotEmpty() ->
+                mergedReviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0
+            baseDetail.rating > 0.0 -> baseDetail.rating
+            else -> summary.rating
+        }
 
         return baseDetail.copy(
             reviews = mergedReviews,
@@ -268,19 +272,17 @@ class SupabaseRepository(
         )
     }
 
-    override suspend fun getReviewsForRestaurant(restaurantName: String): List<Review> {
+    /**
+     * In-app reviews: first matches `restaurant_id` or case-insensitive full `restaurant_name`,
+     * then falls back to a two-word `ilike` pattern when names in `reviews` are shorter than
+     * the current Google-facing title.
+     */
+    override suspend fun getReviewsForRestaurant(restaurantName: String, restaurantId: String?): List<Review> {
         val normalizedName = restaurantName.trim()
-        if (normalizedName.isBlank()) return emptyList()
+        if (normalizedName.isBlank() && restaurantId.isNullOrBlank()) return emptyList()
 
         return try {
-            val reviewRows = client.from(reviewsTable)
-                .select(Columns.raw("*")) {
-                    filter {
-                        eq("restaurant_name", normalizedName)
-                    }
-                }
-                .decodeList<JsonObject>()
-
+            val reviewRows = fetchReviewRowsForRestaurant(normalizedName, restaurantId)
             val usernameByUserId = mutableMapOf<String, String?>()
             reviewRows.mapNotNull { row ->
                 val userId = row.getString("user_id").takeIf { it.isNotBlank() }
@@ -288,10 +290,77 @@ class SupabaseRepository(
                     usernameByUserId[userId] = getUsernameByUserId(userId)
                 }
                 row.toReview(usernameByUserId[userId])
-            }.sortedByDescending { review -> review.createdAt.orEmpty() }
+            }
+                .sortedByDescending { review -> review.createdAt.orEmpty() }
+                .take(25)
         } catch (t: Throwable) {
-            fallback.getReviewsForRestaurant(normalizedName)
+            fallback.getReviewsForRestaurant(normalizedName, restaurantId)
         }
+    }
+
+    private suspend fun fetchReviewRowsForRestaurant(
+        normalizedName: String,
+        restaurantId: String?,
+    ): List<JsonObject> {
+        val primary = runCatching {
+            client.from(reviewsTable)
+                .select(Columns.raw("*")) {
+                    filter {
+                        when {
+                            !restaurantId.isNullOrBlank() && normalizedName.isNotBlank() -> {
+                                or {
+                                    eq("restaurant_id", restaurantId)
+                                    ilike("restaurant_name", normalizedName)
+                                }
+                            }
+                            !restaurantId.isNullOrBlank() -> {
+                                eq("restaurant_id", restaurantId)
+                            }
+                            else -> {
+                                ilike("restaurant_name", normalizedName)
+                            }
+                        }
+                    }
+                }
+                .decodeList<JsonObject>()
+        }.getOrDefault(emptyList()).distinctBy { it.getString("id") }
+
+        if (primary.isNotEmpty()) return primary
+        if (normalizedName.isBlank()) return emptyList()
+
+        val words = normalizedName.split(Regex("\\s+")).filter { it.length > 1 }
+        val fuzzyPattern = when {
+            words.size >= 2 -> "%${words[0]}%${words[1]}%"
+            words.size == 1 && words[0].length >= 4 -> "%${words[0]}%"
+            else -> return emptyList()
+        }
+
+        return runCatching {
+            client.from(reviewsTable)
+                .select(Columns.raw("*")) {
+                    filter {
+                        ilike("restaurant_name", fuzzyPattern)
+                    }
+                }
+                .decodeList<JsonObject>()
+        }.getOrDefault(emptyList())
+            .distinctBy { it.getString("id") }
+            .filter { row ->
+                namesLikelySame(normalizedName, row.getString("restaurant_name"))
+            }
+    }
+
+    private fun namesLikelySame(appName: String, storedReviewName: String): Boolean {
+        val a = appName.trim().lowercase()
+        val b = storedReviewName.trim().lowercase()
+        if (a.isBlank() || b.isBlank()) return false
+        if (a == b) return true
+        if (a.contains(b) || b.contains(a)) return true
+        val aw = a.split(Regex("\\s+")).filter { it.length > 2 }.toSet()
+        val bw = b.split(Regex("\\s+")).filter { it.length > 2 }.toSet()
+        val inter = aw.intersect(bw)
+        return inter.size >= 2 ||
+            (inter.isNotEmpty() && (inter.maxOfOrNull { it.length } ?: 0) >= 5)
     }
 
     override suspend fun reviewsByUserIds(userIds: Set<String>): List<Review> =
@@ -512,9 +581,7 @@ class SupabaseRepository(
     override suspend fun restaurants(): List<Restaurant> {
         val savedIds = fetchSavedRestaurantIds()
         return try {
-            val raw = client.postgrest[restaurantsTable]
-                .select(Columns.raw("*"))
-                .decodeList<JsonObject>()
+            val raw = loadRestaurantRows()
             val mapped = raw.mapNotNull { it.toDomain(savedIds) }
             println("SupabaseRepository.restaurants: fetched=${raw.size} mapped=${mapped.size}")
             if (raw.isNotEmpty()) {
@@ -526,6 +593,28 @@ class SupabaseRepository(
             t.printStackTrace()
             fallback.restaurants()
         }
+    }
+
+    private suspend fun loadRestaurantRows(): List<JsonObject> {
+        val appRows = runCatching {
+            client.postgrest[appReadModelTable]
+                .select(Columns.raw("*"))
+                .decodeList<JsonObject>()
+        }.getOrDefault(emptyList())
+        val legacyRows = runCatching {
+            client.postgrest[restaurantsTable]
+                .select(Columns.raw("*"))
+                .decodeList<JsonObject>()
+        }.getOrDefault(emptyList())
+        if (appRows.isEmpty()) return legacyRows
+        if (legacyRows.isEmpty()) return appRows
+
+        val appIds = appRows.mapNotNull { row -> row.getString("id").takeIf { it.isNotBlank() } }.toSet()
+        val legacyOnlyRows = legacyRows.filter { row ->
+            val id = row.getString("id")
+            id.isBlank() || id !in appIds
+        }
+        return appRows + legacyOnlyRows
     }
 
     override suspend fun userPreferences(): List<String> {
@@ -630,6 +719,22 @@ class SupabaseRepository(
             put("restaurant_id", restaurantId)
         }
 
+    private suspend fun loadSearchDetailsByRestaurantId(): Map<String, JsonObject> {
+        val appRows = runCatching {
+            client.postgrest[appReadModelTable]
+                .select(Columns.raw("id, description, attributes"))
+                .decodeList<JsonObject>()
+                .associateBy { row -> row.getString("id") }
+        }.getOrDefault(emptyMap())
+        val legacyRows = runCatching {
+            client.postgrest["restaurant_details"]
+                .select(Columns.raw("restaurant_id, description, attributes"))
+                .decodeList<JsonObject>()
+                .associateBy { row -> row.getString("restaurant_id") }
+        }.getOrDefault(emptyMap())
+        return appRows + legacyRows.filterKeys { it !in appRows }
+    }
+
     private fun JsonObject.toUser(): User? {
         val id = getString("id")
         if (id.isBlank()) return null
@@ -650,7 +755,7 @@ class SupabaseRepository(
     private fun JsonObject.toDomain(savedIds: Set<String>): Restaurant? {
         val id = getString("id")
         if (id.isBlank()) return null
-        val category = getString("category")
+        val category = getString("category_name").ifBlank { getString("category") }
         val tags = RestaurantClassification.deriveTags(category, getStringList("tags").toSet())
         val reviewTagProfile = getDoubleMap("review_tag_profile")
         val dietaryFromDb = RestaurantClassification.profileFromLevels(
@@ -667,15 +772,16 @@ class SupabaseRepository(
         }
         return Restaurant(
             id = id,
-            name = getString("name"),
+            name = getString("name").ifBlank { getString("title") },
             category = category,
-            price = getString("price"),
-            eta = getString("eta"),
+            price = getString("price").ifBlank { getString("price_range") },
+            eta = getString("eta").ifBlank { "ETA unavailable" },
             rating = getDouble("rating"),
             isSaved = id in savedIds,
-            location = getString("location", "Addis Ababa"),
+            location = getString("city").ifBlank { getString("location", "Addis Ababa") },
             latitude = getDouble("latitude"),
             longitude = getDouble("longitude"),
+            imageUrl = getString("image_url").takeIf { it.isNotBlank() },
             tags = tags,
             dietaryProfile = dietaryProfile,
             reviewTagProfile = reviewTagProfile,
@@ -695,9 +801,22 @@ class SupabaseRepository(
             ?.takeIf { it.isNotBlank() }
     }
 
-    private fun JsonObject.toReview(username: String?): Review? {
+    private fun JsonObject.getFirstString(vararg keys: String): String? =
+        keys.firstNotNullOfOrNull { key ->
+            this[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        }
+
+    private fun JsonObject.toReview(usernameFromUsersTable: String?): Review? {
         val restaurantName = getString("restaurant_name")
         if (restaurantName.isBlank()) return null
+        val source = getFirstString("source", "review_source")?.lowercase()?.trim()
+        if (!source.isNullOrBlank() && (source == "google" || source.contains("google"))) return null
+        if (getBoolean("is_google") || getBoolean("is_google_review")) return null
+
+        val uid = getString("user_id").takeIf { it.isNotBlank() }
+        val displayName = usernameFromUsersTable
+            ?: getFirstString("username", "reviewer_name", "author_name", "author", "reviewer_display_name", "review_author")
+                ?.takeIf { it.isNotBlank() }
 
         return Review(
             id = getString("id", Random.nextInt(0, 1_000_000).toString()),
@@ -705,27 +824,19 @@ class SupabaseRepository(
             tags = ReviewTagCatalog.normalizeTags(getStringList("tags")),
             content = getString("content"),
             rating = getInt("rating", 5),
-            userId = getString("user_id").takeIf { it.isNotBlank() },
-            username = username,
+            userId = uid,
+            username = displayName,
             createdAt = getString("created_at").takeIf { it.isNotBlank() },
         )
     }
 
     private fun buildRestaurantDetail(summary: Restaurant): RestaurantDetail {
         val query = summary.name.replace(" ", "+")
-        val imageKey = when (summary.category.lowercase()) {
-            "pizza" -> "pizza_home"
-            "sushi" -> "beyayenet_home"
-            "burgers", "fast food" -> "chesse_burger_home"
-            "coffee", "cafe", "drink" -> "coffee_home"
-            "italian" -> "local_home"
-            else -> "coffee_home"
-        }
 
         return RestaurantDetail(
             restaurantId = summary.id,
             name = summary.name,
-            images = listOf(imageKey, "drink_home"),
+            images = RestaurantClassification.defaultDetailImageKeys(summary.category),
             featuredItems = listOf(
                 FeaturedItem(
                     name = "Chef Recommendation",

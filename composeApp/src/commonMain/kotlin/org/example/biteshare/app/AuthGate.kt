@@ -1,6 +1,9 @@
 package org.example.biteshare.app
 
 import androidx.compose.runtime.Composable
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +34,14 @@ fun AuthGate(
     model: Model,
     locationAccess: LocationAccess = NoopLocationAccess,
 ) {
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+            .components {
+                add(KtorNetworkFetcherFactory())
+            }
+            .build()
+    }
+
     val repo: BiteShareRepository = remember(model) { SupabaseRepository(model) }
 
     val isLoggedIn = model.currentUser != null

@@ -1,6 +1,45 @@
 package org.example.biteshare.domain
 
 object RestaurantClassification {
+    /**
+     * Keys for bundled drawables used by [org.example.biteshare.view.DetailView] when
+     * no remote image URLs are available.
+     */
+    /**
+     * Maps a category label (e.g. from Google types: "Sushi restaurant") to a bundled drawable key
+     * for Home/Browse when [Restaurant.imageUrl] is null.
+     */
+    fun categoryLabelToImageKey(label: String): String {
+        val l = label.lowercase()
+        return when {
+            "pizza" in l -> "pizza_home"
+            "sushi" in l || "japanese" in l -> "beyayenet_home"
+            "burger" in l || "fast food" in l -> "chesse_burger_home"
+            "coffee" in l || "cafe" in l || "café" in l || "tea" in l -> "coffee_home"
+            "italian" in l -> "local_home"
+            "indian" in l || "chinese" in l || "thai" in l || "vietnamese" in l || "korean" in l -> "local_home"
+            "mexican" in l -> "fast_food_home"
+            "bubble" in l || "sandwich" in l || "shop" in l -> "drink_home"
+            "breakfast" in l || "brunch" in l -> "breakfast_home"
+            "dessert" in l || "milkshake" in l || "ice cream" in l -> "milkshake_home"
+            "seafood" in l -> "beyayenet_home"
+            "middle eastern" in l || "shawarma" in l || "halal" in l -> "fast_food_home"
+            else -> "local_home"
+        }
+    }
+
+    fun defaultDetailImageKeys(category: String): List<String> {
+        val key = when (category.lowercase()) {
+            "pizza" -> "pizza_home"
+            "sushi" -> "beyayenet_home"
+            "burgers", "fast food" -> "chesse_burger_home"
+            "coffee", "cafe", "drink" -> "coffee_home"
+            "italian" -> "local_home"
+            else -> "coffee_home"
+        }
+        return listOf(key, "drink_home")
+    }
+
     fun normalizeTag(value: String): String =
         value.lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 

@@ -92,7 +92,9 @@
         "dependsOn": [
           "nativeMain"
         ],
-        "moduleDependency": [],
+        "moduleDependency": [
+          "org.jetbrains.kotlinx:kotlinx-serialization-json"
+        ],
         "sourceSetCInteropMetadataDirectory": "appleMain-cinterop",
         "binaryLayout": "klib",
         "hostSpecific": "true"
@@ -101,7 +103,8 @@
         "name": "commonMain",
         "dependsOn": [],
         "moduleDependency": [
-          "org.jetbrains.kotlin:kotlin-stdlib"
+          "org.jetbrains.kotlin:kotlin-stdlib",
+          "org.jetbrains.kotlinx:kotlinx-serialization-json"
         ],
         "binaryLayout": "klib"
       },
@@ -110,7 +113,9 @@
         "dependsOn": [
           "appleMain"
         ],
-        "moduleDependency": [],
+        "moduleDependency": [
+          "org.jetbrains.kotlinx:kotlinx-serialization-json"
+        ],
         "sourceSetCInteropMetadataDirectory": "iosMain-cinterop",
         "binaryLayout": "klib",
         "hostSpecific": "true"
@@ -120,7 +125,9 @@
         "dependsOn": [
           "commonMain"
         ],
-        "moduleDependency": [],
+        "moduleDependency": [
+          "org.jetbrains.kotlinx:kotlinx-serialization-json"
+        ],
         "sourceSetCInteropMetadataDirectory": "nativeMain-cinterop",
         "binaryLayout": "klib",
         "hostSpecific": "true"
@@ -131,7 +138,8 @@
           "commonMain"
         ],
         "moduleDependency": [
-          "org.jetbrains.kotlin:kotlin-stdlib"
+          "org.jetbrains.kotlin:kotlin-stdlib",
+          "org.jetbrains.kotlinx:kotlinx-serialization-json"
         ],
         "binaryLayout": "klib"
       }

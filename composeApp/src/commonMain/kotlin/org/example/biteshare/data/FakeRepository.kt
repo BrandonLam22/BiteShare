@@ -13,6 +13,7 @@ import org.example.biteshare.domain.PickModel
 import org.example.biteshare.domain.PopularItem
 import org.example.biteshare.domain.ProfileData
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.domain.RestaurantDetail
 import org.example.biteshare.domain.RestaurantLocation
 import org.example.biteshare.domain.VoteSession
@@ -172,7 +173,7 @@ class FakeRepository(
     override suspend fun getRestaurantDetailById(id: String): RestaurantDetail? {
         val summary = getRestaurantById(id) ?: return null
         val baseDetail = MockDB.restaurantDetails[id] ?: buildFallbackDetail(summary)
-        val reviews = getReviewsForRestaurant(summary.name)
+        val reviews = getReviewsForRestaurant(summary.name, summary.id)
         val averageRating = reviews.map { it.rating }.average().takeIf { !it.isNaN() } ?: baseDetail.rating
         return baseDetail.copy(
             reviews = reviews,
@@ -180,7 +181,7 @@ class FakeRepository(
         )
     }
 
-    override suspend fun getReviewsForRestaurant(restaurantName: String): List<Review> =
+    override suspend fun getReviewsForRestaurant(restaurantName: String, restaurantId: String?): List<Review> =
         (model.getReviewsForRestaurant(restaurantName) + MockDB.reviewsForRestaurant(restaurantName))
             .distinctBy { it.id }
 
@@ -372,17 +373,10 @@ class FakeRepository(
 
     private fun buildFallbackDetail(summary: Restaurant): RestaurantDetail {
         val query = summary.name.replace(" ", "+")
-        val imageKey = when (summary.category.lowercase()) {
-            "pizza" -> "pizza_home"
-            "sushi" -> "beyayenet_home"
-            "burgers", "fast food" -> "chesse_burger_home"
-            "coffee", "cafe", "drink" -> "coffee_home"
-            else -> "coffee_home"
-        }
         return RestaurantDetail(
             restaurantId = summary.id,
             name = summary.name,
-            images = listOf(imageKey, "drink_home"),
+            images = RestaurantClassification.defaultDetailImageKeys(summary.category),
             featuredItems = listOf(FeaturedItem("Chef Recommendation", summary.price, "Popular choice from this restaurant")),
             location = RestaurantLocation(
                 city = summary.location,

@@ -5,12 +5,9 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import org.example.biteshare.data.FakeRepository
 import org.example.biteshare.runMainTest
 import org.example.biteshare.viewmodel.DetailViewModel
-import org.example.biteshare.viewmodel.MealTab
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetailViewModelTest {
 
@@ -24,8 +21,6 @@ class DetailViewModelTest {
         assertNotNull(state.restaurantDetail)
         assertEquals("uw1", state.restaurant?.id)
         assertEquals("uw1", state.restaurantDetail?.restaurantId)
-        assertTrue(state.timeSlots.isNotEmpty())
-        assertNotNull(state.selectedTimeSlot)
     }
 
     @Test
@@ -33,7 +28,7 @@ class DetailViewModelTest {
         val repo = FakeRepository()
         val detail = repo.getRestaurantDetailById("p1")
         val expectedCount = detail?.reviews?.size ?: 0
-        val expectedAverage = detail?.reviews?.map { it.rating }?.average()?.takeIf { !it.isNaN() } ?: 0.0
+        val expectedAverage = detail?.reviews?.map { it.ratingForAverage() }?.average()?.takeIf { !it.isNaN() } ?: 0.0
 
         val vm = DetailViewModel(repo, "p1")
         advanceUntilIdle()
@@ -41,31 +36,6 @@ class DetailViewModelTest {
 
         assertEquals(expectedCount, state.reviewCount)
         assertEquals(expectedAverage, state.averageReviewScore)
-    }
-
-    @Test
-    fun selectMealUpdatesTimeSlotsAndResetsSelectedTime() = runMainTest {
-        val vm = DetailViewModel(FakeRepository(), "uw3")
-        advanceUntilIdle()
-
-        vm.selectMeal(MealTab.Dinner)
-
-        assertEquals(MealTab.Dinner, vm.uiState.selectedMeal)
-        assertEquals(listOf("5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM"), vm.uiState.timeSlots)
-        assertEquals("5:30 PM", vm.uiState.selectedTimeSlot)
-    }
-
-    @Test
-    fun selectTimeSlotUpdatesOnlySelectedSlot() = runMainTest {
-        val vm = DetailViewModel(FakeRepository(), "uw8")
-        advanceUntilIdle()
-        val target = "11:00 AM"
-
-        vm.selectMeal(MealTab.Brunch)
-        vm.selectTimeSlot(target)
-
-        assertEquals(target, vm.uiState.selectedTimeSlot)
-        assertTrue(vm.uiState.timeSlots.contains(target))
     }
 
     @Test
