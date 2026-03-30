@@ -32,6 +32,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.example.biteshare.domain.UserRow
 import org.jetbrains.compose.resources.getString
 import org.example.biteshare.domain.RestaurantLocation
@@ -941,10 +943,10 @@ class SupabaseRepository(
             client
                 .from(reviewsTable)
                 .update(
-                    mapOf(
-                        "rating" to newRating,
-                        "content" to newComment
-                    )
+                    buildJsonObject {
+                        put("rating", newRating)
+                        put("content", newComment)
+                    }
                 ) {
                     filter {
                         eq("id", reviewId)
