@@ -1,5 +1,6 @@
 package org.example.biteshare.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,10 +9,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+
 import org.example.biteshare.domain.Restaurant
+import org.example.biteshare.domain.RestaurantClassification
 import org.example.biteshare.viewmodel.SavedViewModel
+import org.jetbrains.compose.resources.painterResource
 
 class SavedView(
     private val vm: SavedViewModel,
@@ -62,13 +67,11 @@ class SavedView(
             ) {
                 items(s.savedRestaurants) { restaurant ->
                     SavedRestaurantCard(
-                        category = restaurant.category,
-                        name = restaurant.name,
-                        price = restaurant.price,
-                        eta = restaurant.eta,
-                        rating = restaurant.rating,
+
                         onToggleSaved = { vm.toggleSaved(restaurant.id) },
-                        onClick = { onRestaurantClick(restaurant) }
+                        onClick = { onRestaurantClick(restaurant) },
+                        restaurant = restaurant,
+
                     )
                 }
             }
@@ -136,11 +139,8 @@ class SavedView(
 */
     @Composable
     private fun SavedRestaurantCard(
-        category: String,
-        name: String,
-        price: String,
-        eta: String,
-        rating: Double,
+
+        restaurant: Restaurant,
         onToggleSaved: () -> Unit,
         onClick: () -> Unit,
     ) {
@@ -155,9 +155,39 @@ class SavedView(
                         .fillMaxWidth()
                         .height(150.dp),
                 ) {
+                    when {
+                        !restaurant.imageUrl.isNullOrBlank() -> {
+                            RestaurantDetailImage(
+                                imageRef = restaurant.imageUrl!!,
+                                contentDescription = restaurant.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                        else -> {
+                            val res = imageResByKey(
+                                RestaurantClassification.categoryLabelToImageKey(restaurant.category),
+                            )
+                            if (res != null) {
+                                Image(
+                                    painter = painterResource(res),
+                                    contentDescription = restaurant.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text("🍴", style = MaterialTheme.typography.displayMedium)
+                                }
+                            }
+                        }
+                    }
                     AssistChip(
                         onClick = {},
-                        label = { Text(category) },
+                        label = { Text(restaurant.category) },
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(10.dp)
@@ -171,12 +201,6 @@ class SavedView(
                     ) {
                         Text("♥", style = MaterialTheme.typography.titleLarge)
                     }
-
-                    Text(
-                        text = "Image",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
                 }
 
                 Row(
@@ -186,15 +210,15 @@ class SavedView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(name, style = MaterialTheme.typography.titleMedium)
+                        Text(restaurant.name, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
-                        Text("$price  •  $eta", style = MaterialTheme.typography.bodyMedium)
+                        Text("${restaurant.price}  •  ${restaurant.eta}", style = MaterialTheme.typography.bodyMedium)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("⭐", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "$rating stars",
+                            "${restaurant.rating} stars",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

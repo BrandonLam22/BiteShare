@@ -138,7 +138,7 @@ class EditProfileView(
             PreferenceSection(
                 title = "Food Preferences",
                 subtitle = "Add cuisines or foods you enjoy",
-                placeholder = "e.g., Pizza, Sushi, Mexican",
+                placeholder = "e.g., Pizza, Sushi, Japanese",
                 inputValue = s.preferenceInput,
                 onInputChange = vm::updatePreferenceInput,
                 onAdd = vm::addPreference,
@@ -155,7 +155,7 @@ class EditProfileView(
             PreferenceSection(
                 title = "Food Restrictions",
                 subtitle = "Add dietary restrictions or allergies",
-                placeholder = "e.g., Peanuts, Gluten, Dairy",
+                placeholder = "e.g., Vegan, Gluten, Peanuts",
                 inputValue = s.restrictionInput,
                 onInputChange = vm::updateRestrictionInput,
                 onAdd = vm::addRestriction,
