@@ -80,6 +80,7 @@ private sealed class PickRoute {
     data class GroupRecommend(val ctx: PickContext) : PickRoute()
     data class Vote(val ctx: PickContext) : PickRoute()
     data class SoloRecommend(val ctx: PickContext) : PickRoute()
+    data class Detail(val restaurantId: String) : PickRoute()
     data object Invites : PickRoute()
     data class JoinVote(val sessionId: String) : PickRoute()
     data object History : PickRoute()
@@ -114,6 +115,7 @@ fun AppRoot(
     var tab by remember { mutableStateOf(Tab.Home) }
     var homeRoute by remember { mutableStateOf<HomeRoute>(HomeRoute.Main) }
     var pickRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
+    var pickReturnRoute by remember { mutableStateOf<PickRoute>(PickRoute.Main) }
     var profileRoute by remember { mutableStateOf<ProfileRoute>(ProfileRoute.Main) }
 
     val homeVm = remember(repo, pickRepo) { HomeViewModel(repo, pickRepo) }
@@ -253,9 +255,9 @@ fun AppRoot(
                                     scope.launch {
                                         val items = pickModel.recommend(context)
                                         if (context.mode == PickMode.WITH_FRIENDS) {
-                                            recVm.loadItems(
+                                            recVm.loadGroupItems(
                                                 items = items,
-                                                title = "Recommended for Your Group"
+                                                title = "Recommended for Your Group",
                                             )
                                             pickRoute = PickRoute.GroupRecommend(context)
                                         } else {
@@ -274,7 +276,12 @@ fun AppRoot(
                                 vm = recVm,
                                 onBack = { pickRoute = PickRoute.Main },
                                 actionLabel = "Start Voting",
-                                onActionClick = { pickRoute = PickRoute.Vote(route.ctx) }
+                                onActionClick = { pickRoute = PickRoute.Vote(route.ctx) },
+                                onShuffle = { recVm.shuffleGroupItems() },
+                                onRestaurantClick = { restaurant ->
+                                    pickReturnRoute = pickRoute
+                                    pickRoute = PickRoute.Detail(restaurant.id)
+                                }
                             ).Content()
                         }
 
@@ -305,7 +312,21 @@ fun AppRoot(
                             }
                             RecommendsView(
                                 vm = recVm,
-                                onBack = { pickRoute = PickRoute.Main }
+                                onBack = { pickRoute = PickRoute.Main },
+                                onRestaurantClick = { restaurant ->
+                                    pickReturnRoute = pickRoute
+                                    pickRoute = PickRoute.Detail(restaurant.id)
+                                }
+                            ).Content()
+                        }
+
+                        is PickRoute.Detail -> {
+                            val detailVm = remember(route.restaurantId) {
+                                DetailViewModel(repo, route.restaurantId)
+                            }
+                            DetailView(
+                                vm = detailVm,
+                                onBack = { pickRoute = pickReturnRoute }
                             ).Content()
                         }
 

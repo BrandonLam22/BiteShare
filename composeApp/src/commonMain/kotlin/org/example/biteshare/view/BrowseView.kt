@@ -268,11 +268,13 @@ class BrowseView(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            text = restaurant.eta,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        etaLabel(restaurant.eta)?.let { eta ->
+                            Text(
+                                text = eta,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
                             text = "${restaurant.rating} stars",
                             style = MaterialTheme.typography.bodySmall,

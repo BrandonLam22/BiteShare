@@ -1,6 +1,7 @@
 package org.example.biteshare.view
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +22,8 @@ class RecommendsView(
     private val onBack: () -> Unit = {},
     private val actionLabel: String? = null,
     private val onActionClick: (() -> Unit)? = null,
+    private val onShuffle: (() -> Unit)? = null,
+    private val onRestaurantClick: (Restaurant) -> Unit = {},
 ) {
     @Composable
     fun Content() {
@@ -53,11 +56,31 @@ class RecommendsView(
             Spacer(Modifier.height(12.dp))
 
             if (actionLabel != null && onActionClick != null && s.items.isNotEmpty()) {
-                Button(
-                    onClick = onActionClick,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(actionLabel)
+                if (onShuffle != null && s.canShuffle) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onShuffle,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Shuffle")
+                        }
+                        Button(
+                            onClick = onActionClick,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(actionLabel)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onActionClick,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(actionLabel)
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -78,7 +101,8 @@ class RecommendsView(
                 s.items.forEach { r ->
                     RestaurantCard(
                         restaurant = r,
-                        onToggleSaved = { vm.toggleSaved(r.id) }
+                        onToggleSaved = { vm.toggleSaved(r.id) },
+                        onClick = { onRestaurantClick(r) },
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -91,10 +115,13 @@ class RecommendsView(
     private fun RestaurantCard(
         restaurant: Restaurant,
         onToggleSaved: () -> Unit,
+        onClick: () -> Unit,
     ) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
         ) {
             Column {
                 Box(
@@ -160,7 +187,10 @@ class RecommendsView(
                     Column(Modifier.weight(1f)) {
                         Text(restaurant.name, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
-                        Text("${restaurant.price}  •  ${restaurant.eta}", style = MaterialTheme.typography.bodyMedium)
+                        val meta = joinInfo("  •  ", restaurant.price, etaLabel(restaurant.eta))
+                        if (meta.isNotBlank()) {
+                            Text(meta, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                     Text("⭐ ${restaurant.rating}", style = MaterialTheme.typography.bodyMedium)
                 }

@@ -212,7 +212,10 @@ class SavedView(
                     Column(Modifier.weight(1f)) {
                         Text(restaurant.name, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
-                        Text("${restaurant.price}  •  ${restaurant.eta}", style = MaterialTheme.typography.bodyMedium)
+                        val meta = joinInfo("  •  ", restaurant.price, etaLabel(restaurant.eta))
+                        if (meta.isNotBlank()) {
+                            Text(meta, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("⭐", style = MaterialTheme.typography.bodyMedium)
