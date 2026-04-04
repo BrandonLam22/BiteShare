@@ -76,4 +76,7 @@ TODO: GitLab Releases: https://git.uwaterloo.ca/b3lam/cs346-group-7/-/releases
 - [Class Diagrams](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Class-Diagrams)
 
 ## Grading Instructions
-TODO
+Use either of these users to log in:
+
+- username: `Kevin`, password: `12345678`
+- username: `Steven`, password: `123`

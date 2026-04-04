@@ -42,7 +42,9 @@ class PickForMeViewModel(
     private var previewJob: Job? = null
 
     init {
-        loadLookups()
+        scope.launch {
+            refreshLookups()
+        }
     }
 
     fun setMode(mode: PickMode) {
@@ -93,6 +95,24 @@ class PickForMeViewModel(
             currentLocation = uiState.currentLocation,
         )
 
+    suspend fun refreshLookups() {
+        val friends = model.friends()
+        val currentLocation = uiState.currentLocation ?: model.currentUserLocation()
+        val activeFriendIds = friends
+            .asSequence()
+            .map { it.id }
+            .filter { it.isNotBlank() }
+            .toSet()
+        val updatedState = uiState.copy(
+            friends = friends,
+            selectedFriendIds = uiState.selectedFriendIds.intersect(activeFriendIds),
+            currentLocation = currentLocation
+        )
+        if (updatedState == uiState) return
+        uiState = updatedState
+        refreshPreview()
+    }
+
     private fun updateFilters(update: (PickFilters) -> PickFilters) {
         uiState = uiState.copy(filters = update(uiState.filters))
         refreshPreview()
@@ -105,18 +125,6 @@ class PickForMeViewModel(
             delay(PREVIEW_DEBOUNCE_MS)
             val count = model.previewCount(context)
             uiState = uiState.copy(resultPreviewCount = count)
-        }
-    }
-
-    private fun loadLookups() {
-        scope.launch {
-            val friends = model.friends()
-            val currentLocation = model.currentUserLocation()
-            uiState = uiState.copy(
-                friends = friends,
-                currentLocation = currentLocation
-            )
-            refreshPreview()
         }
     }
 

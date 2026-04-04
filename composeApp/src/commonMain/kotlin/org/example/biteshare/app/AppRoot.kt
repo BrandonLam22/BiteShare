@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.biteshare.data.BiteShareRepository
 import org.example.biteshare.data.PickDbRepository
@@ -65,6 +66,7 @@ import org.example.biteshare.viewmodel.FriendRequestsViewModel
 import org.example.biteshare.viewmodel.ReviewsListViewModel
 
 private enum class Tab { Home, Review, Pick, Profile }
+private const val PICK_LOOKUPS_REFRESH_MS = 3000L
 
 private sealed class HomeRoute {
     data object Main : HomeRoute()
@@ -249,6 +251,12 @@ fun AppRoot(
                 Box(Modifier.padding(innerPadding)) {
                     when (val route = pickRoute) {
                         PickRoute.Main -> {
+                            LaunchedEffect(Unit) {
+                                while (true) {
+                                    pickVm.refreshLookups()
+                                    delay(PICK_LOOKUPS_REFRESH_MS)
+                                }
+                            }
                             PickForMeView(
                                 vm = pickVm,
                                 onGo = {
