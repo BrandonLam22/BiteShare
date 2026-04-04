@@ -17,8 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,16 +31,9 @@ import org.example.biteshare.viewmodel.SignupViewModel
 fun SignupView(viewModel: SignupViewModel,
                onSignupSuccess: () -> Unit,
                onNavigateToLogin: () -> Unit) {
-    val focusManager = LocalFocusManager.current
-
     Column(
         modifier = Modifier
             .fillMaxSize() // take up the whole screen
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    focusManager.clearFocus()
-                })
-            }
             .background(Color.White), // set the background color to white
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

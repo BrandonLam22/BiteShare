@@ -139,10 +139,9 @@ class SupabaseRepository(
             put("longitude", 0.0)
             put("notifications_enabled", true)
         }
-        //client.from(usersTable).insert(newUserJson)
-        //return newUserJson.toUser()
+        client.from(usersTable).insert(newUserJson)
         val newUser = newUserJson.toUser() ?: return null
-        model.applyAuthenticatedUser(newUser)  // ADD THIS
+        model.applyAuthenticatedUser(newUser)
         return newUser
 
     }
