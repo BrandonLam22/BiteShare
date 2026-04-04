@@ -786,6 +786,7 @@ data class HomeFeed(
 data class ProfileData(
     val name: String,
     val email: String,
+    val bio: String,
     val friendCount: Int,
     val notificationsEnabled: Boolean,
 )

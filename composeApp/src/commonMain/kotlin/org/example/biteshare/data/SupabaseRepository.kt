@@ -451,6 +451,7 @@ class SupabaseRepository(
         return ProfileData(
             name = row.username,
             email = row.email,
+            bio = row.bio,
             friendCount = freshFriendCount,
             notificationsEnabled = row.notificationsEnabled
         )
