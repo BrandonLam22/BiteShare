@@ -14,13 +14,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.example.biteshare.domain.BudgetFilter
 import org.example.biteshare.domain.CuisineFilter
 import org.example.biteshare.domain.DistanceFilter
 import org.example.biteshare.domain.PickMode
 import org.example.biteshare.viewmodel.PickForMeViewModel
+
+private val ReviewOrange = Color(0xFFFF7A00)
 
 class PickForMeView(
     private val vm: PickForMeViewModel,
@@ -44,6 +48,8 @@ class PickForMeView(
                 text = "Pick for Me",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
+                fontSize = 40.sp,
+                color = ReviewOrange,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
@@ -59,7 +65,8 @@ class PickForMeView(
                 Text(
                     text = "Select Your Friends",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = ReviewOrange
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -94,7 +101,8 @@ class PickForMeView(
             Text(
                 text = "Advanced Filters",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = ReviewOrange
             )
             Spacer(Modifier.height(12.dp))
 
@@ -114,7 +122,7 @@ class PickForMeView(
                 Text(
                     text = "Location unavailable. Tap a distance to request access.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = ReviewOrange
                 )
             }
 
@@ -159,7 +167,8 @@ class PickForMeView(
 
             Text(
                 text = "Minimum rating: ${s.filters.minRating}/10",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = ReviewOrange
             )
             Slider(
                 value = s.filters.minRating.toFloat(),
@@ -171,7 +180,7 @@ class PickForMeView(
             Text(
                 text = "${s.resultPreviewCount} matches based on your filters",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = ReviewOrange
             )
 
             Spacer(Modifier.height(20.dp))
@@ -187,7 +196,11 @@ class PickForMeView(
                     Text("🚀")
                 }
                 Spacer(Modifier.width(10.dp))
-                Text("Go!", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Go!",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ReviewOrange
+                )
             }
         }
     }
@@ -197,7 +210,8 @@ class PickForMeView(
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            color = ReviewOrange
         )
         Spacer(Modifier.height(6.dp))
     }
@@ -282,12 +296,17 @@ class PickForMeView(
                     Text(
                         text = name.take(1),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = ReviewOrange
                     )
                 }
             }
             Spacer(Modifier.height(6.dp))
-            Text(name, style = MaterialTheme.typography.labelMedium)
+            Text(
+                name,
+                style = MaterialTheme.typography.labelMedium,
+                color = ReviewOrange
+            )
         }
     }
 

@@ -321,6 +321,7 @@ class FakeRepository(
         return ProfileData(
             name = user?.username ?: "Guest",
             email = user?.email ?: "",
+            bio = user?.bio ?: "",
             friendCount = user?.friends?.size ?: MockDB.friends.size,
             notificationsEnabled = notificationsEnabled
         )

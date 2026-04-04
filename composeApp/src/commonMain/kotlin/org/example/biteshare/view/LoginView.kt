@@ -9,12 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -102,18 +99,19 @@ fun LoginView(viewModel: LoginViewModel,
                 )
             )
 
-            TextButton(
-                onClick = { /* add navigation to the "reset" screen later */ },
-                modifier = Modifier
-                    .fillMaxWidth(0.9f) // keep it the same width as the input boxes
-                    .wrapContentWidth(Alignment.End), // push the button to the right
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = "forgot password",
-                    color = Color(0xFFFF8C00),
-                )
-            }
+            // TODO: Re-enable forgot-password UI after the app has a real reset-password flow.
+            // TextButton(
+            //     onClick = { /* add navigation to the "reset" screen later */ },
+            //     modifier = Modifier
+            //         .fillMaxWidth(0.9f) // keep it the same width as the input boxes
+            //         .wrapContentWidth(Alignment.End), // push the button to the right
+            //     contentPadding = PaddingValues(0.dp)
+            // ) {
+            //     Text(
+            //         text = "forgot password",
+            //         color = Color(0xFFFF8C00),
+            //     )
+            // }
 
             Spacer(modifier = Modifier.height(20.dp))
 
