@@ -29,18 +29,15 @@ Team 101-07
 - Steven Gao - s38gao@uwaterloo.ca
 
 ### Main Window Screenshot
-![Main Window Screenshot](docs/screenshots/main-window.png)
-
-TODO: Replace the placeholder image path with your final screenshot.
+[Home](docs/screenshots/01-Home.png)
+[Review](docs/screenshots/02-Review.png)
+[Pick](docs/screenshots/03-Pick.png)
+[Profile](docs/screenshots/04-Profile.png)
 
 ### Video Walkthrough
 TODO: Add the public YouTube link to the 1-2 minute walkthrough video.
 
 ### Acknowledgements
-External source code references:
-
-- TODO: Add external code snippets or sources, following the external contribution guidelines.
-
 Third-party libraries:
 
 - JetBrains Compose Multiplatform
@@ -56,7 +53,7 @@ Third-party libraries:
 - Logback
 
 ### Releases
-TODO: GitLab Releases: https://git.uwaterloo.ca/b3lam/cs346-group-7/-/releases
+GitLab Releases: https://git.uwaterloo.ca/b3lam/cs346-group-7/-/releases
 
 ## Project Information
 
