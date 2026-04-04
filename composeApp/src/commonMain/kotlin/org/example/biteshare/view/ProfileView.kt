@@ -178,32 +178,6 @@ class ProfileView(
 
             Spacer(Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("🔔", style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-                Spacer(Modifier.width(16.dp))
-                Text(
-                    text = "Push Notifications",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
-                Switch(
-                    checked = s.notificationsEnabled,
-                    onCheckedChange = { _ -> vm.toggleNotifications() }
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-
             ToggleMenuItem(
                 icon = "🔔",
                 text = "Push Notifications",
