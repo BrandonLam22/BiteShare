@@ -98,6 +98,7 @@ private sealed class ProfileRoute {
     data object FriendRequests : ProfileRoute()
     data object MyReviews : ProfileRoute()
 
+    data class Detail(val restaurantId: String) : ProfileRoute()
 }
 
 @Composable
@@ -387,7 +388,7 @@ fun AppRoot(
 
             Tab.Profile -> {
                 Box(Modifier.padding(innerPadding)) {
-                    when (profileRoute) {
+                    when (val route = profileRoute) {
                         ProfileRoute.Main -> {
                             ProfileView(
                                 vm = profileVm,
@@ -399,6 +400,16 @@ fun AppRoot(
                                 onFriendsList = { profileRoute = ProfileRoute.FriendsList },
                                 onFriendRequests = { profileRoute = ProfileRoute.FriendRequests },
                                 onMyReviews = { profileRoute = ProfileRoute.MyReviews },
+                            ).Content()
+                        }
+                        is ProfileRoute.Detail -> {
+                            val detailVm = remember(route.restaurantId) {
+                                DetailViewModel(repo, route.restaurantId)
+                            }
+
+                            DetailView(
+                                vm = detailVm,
+                                onBack = { profileRoute = ProfileRoute.Saved }
                             ).Content()
                         }
 
@@ -451,11 +462,7 @@ fun AppRoot(
                                         profileRoute = ProfileRoute.Main
                                     },
                                     onRestaurantClick = { restaurant ->
-                                        tab = Tab.Home
-                                        homeRoute = HomeRoute.Detail(
-                                            restaurantId = restaurant.id,
-                                            origin = "saved"
-                                        )
+                                        profileRoute = ProfileRoute.Detail(restaurant.id)
                                     }
                                 )
                             }
