@@ -38,7 +38,7 @@ Team 101-07
 [Profile](docs/screenshots/04-Profile.png)
 
 ### Video Walkthrough
-TODO: Add the public YouTube link to the 1-2 minute walkthrough video.
+[Walkthrough Video](https://www.youtube.com/shorts/On8riUHww5Q)
 
 ### Acknowledgements
 Third-party libraries:
