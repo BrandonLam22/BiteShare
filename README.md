@@ -29,7 +29,8 @@ Team 101-07
 - Steven Gao - s38gao@uwaterloo.ca
 
 ### Main Window Screenshot
-![Main Window](docs/screenshots/01-Home.png)
+
+<img src="docs/screenshots/01-Home.png" width="300" height="200">
 [Home](docs/screenshots/01-Home.png)
 [Review](docs/screenshots/02-Review.png)
 [Pick](docs/screenshots/03-Pick.png)
