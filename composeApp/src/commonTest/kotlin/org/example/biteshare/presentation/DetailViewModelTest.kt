@@ -19,16 +19,21 @@ class DetailViewModelTest {
 
         assertNotNull(state.restaurant)
         assertNotNull(state.restaurantDetail)
-        assertEquals("uw1", state.restaurant?.id)
-        assertEquals("uw1", state.restaurantDetail?.restaurantId)
+        val restaurant = state.restaurant
+        val detail = state.restaurantDetail
+        assertEquals("uw1", restaurant.id)
+        assertEquals("uw1", detail.restaurantId)
     }
 
     @Test
     fun averageReviewAndCountAreComputedFromDetailReviews() = runMainTest {
         val repo = FakeRepository()
         val detail = repo.getRestaurantDetailById("p1")
-        val expectedCount = detail?.reviews?.size ?: 0
-        val expectedAverage = detail?.reviews?.map { it.ratingForAverage() }?.average()?.takeIf { !it.isNaN() } ?: 0.0
+        assertNotNull(detail)
+        val expectedCount = detail.reviews.size
+        val expectedAverage = detail.reviews.map { it.ratingForAverage() }
+            .average()
+            .takeIf { !it.isNaN() } ?: 0.0
 
         val vm = DetailViewModel(repo, "p1")
         advanceUntilIdle()

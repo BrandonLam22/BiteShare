@@ -121,7 +121,7 @@ class ReviewsListView(
                     currentRating = review.rating,
                     currentComment = review.content,
                     onSave = { newRating, newComment ->
-                        vm.editReview(reviewToEdit!!, newRating.toInt(), newComment)
+                        vm.editReview(reviewToEdit!!, newRating, newComment)
                         reviewToEdit = null
                     },
                     onDismiss = { reviewToEdit = null }

@@ -3,7 +3,7 @@ package org.example.biteshare.domain
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.jvm.Transient
+import kotlinx.serialization.Transient
 
 @Serializable
 data class UserRow(

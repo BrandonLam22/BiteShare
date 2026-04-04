@@ -1003,8 +1003,8 @@ class SupabaseRepository(
 
             FriendDetails(
                 name = username,
-                preferences = preferences as List<String>,
-                restrictions = restrictions as List<String>,
+                preferences = preferences,
+                restrictions = restrictions,
                 reviews = reviews.map {
                     FriendReview(
                         restaurantName = it.restaurantName,

@@ -196,8 +196,9 @@ class BrowseView(
                     )
                     when {
                         !restaurant.imageUrl.isNullOrBlank() -> {
+                            val imageUrl = restaurant.imageUrl.orEmpty()
                             RestaurantDetailImage(
-                                imageRef = restaurant.imageUrl!!,
+                                imageRef = imageUrl,
                                 contentDescription = restaurant.name,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,

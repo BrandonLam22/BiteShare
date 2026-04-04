@@ -110,14 +110,15 @@ class DetailView(
             ) {
                 Spacer(Modifier.height(16.dp))
 
-                if (!detail?.images.isNullOrEmpty()) {
+                val detailImages = detail?.images.orEmpty()
+                if (detailImages.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        detail!!.images.forEachIndexed { index, key ->
+                        detailImages.forEachIndexed { index, key ->
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 border = androidx.compose.foundation.BorderStroke(
@@ -207,7 +208,8 @@ class DetailView(
 
                 Spacer(Modifier.height(sectionSpacing))
 
-                if (!detail?.attributes.isNullOrEmpty()) {
+                val detailAttributes = detail?.attributes.orEmpty()
+                if (detailAttributes.isNotEmpty()) {
                     Text(
                         text = "Tags",
                         style = MaterialTheme.typography.titleMedium,
@@ -220,7 +222,7 @@ class DetailView(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        detail!!.attributes.forEach { attr ->
+                        detailAttributes.forEach { attr ->
                             AssistChip(
                                 onClick = {},
                                 label = { Text(attr) }
@@ -253,7 +255,8 @@ class DetailView(
                     Spacer(Modifier.height(sectionSpacing))
                 }
 
-                if (!detail?.featuredItems.isNullOrEmpty()) {
+                val detailFeaturedItems = detail?.featuredItems.orEmpty()
+                if (detailFeaturedItems.isNotEmpty()) {
                     Text(
                         text = "Featured Items",
                         style = MaterialTheme.typography.titleMedium,
@@ -261,7 +264,7 @@ class DetailView(
                     )
                     Spacer(Modifier.height(itemSpacing))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        detail!!.featuredItems.forEach { item ->
+                        detailFeaturedItems.forEach { item ->
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 tonalElevation = 1.dp,

@@ -140,7 +140,8 @@ class PickModelTest {
         model.closeVoteSession(session.id, closedAt)
 
         val updated = model.voteSessionById(session.id)
-        assertTrue(updated?.isClosed == true)
-        assertEquals(closedAt, updated?.closedAtEpoch)
+        assertTrue(updated != null)
+        assertTrue(updated.isClosed)
+        assertEquals(closedAt, updated.closedAtEpoch)
     }
 }
