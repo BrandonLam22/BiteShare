@@ -24,12 +24,12 @@ choose a spot together.
 
 ### Main Window Screenshot
 
-<img src="docs/screenshots/01-Home.png" width="300" height="200">
-<br>
+<img src="docs/screenshots/01-Home.png" width="600" height="400">
+
 <img src="docs/screenshots/02-Review.png" width="300" height="200">
 <br>
 <img src="docs/screenshots/03-Pick.png" width="300" height="200">
-<br>
+
 <img src="docs/screenshots/04-Profile.png" width="300" height="200">
 <br>
 [Home](docs/screenshots/01-Home.png)
