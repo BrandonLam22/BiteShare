@@ -7,7 +7,7 @@ BiteShare helps you discover restaurants, save favorites, and decide where to ea
 2. [Project Information](#project-information)
 3. [User Guide](#user-guide)
 4. [Design Documents](#design-documents)
-5. [Grading Instructions](#grading-instructions)
+
 
 ## Description
 
@@ -20,13 +20,7 @@ filter by distance, budget, cuisine, and rating, and save places you want to rev
 tagged reviews and connect with friends to use Pick-for-Me and group voting when you need to
 choose a spot together.
 
-### Team
-Team 101-07
 
-- Brandon Lam - b3lam@uwaterloo.ca
-- Ruohan Jin - r39jin@uwaterloo.ca
-- Kevin Zhang - k389zhan@uwaterloo.ca
-- Steven Gao - s38gao@uwaterloo.ca
 
 ### Main Window Screenshot
 
@@ -75,8 +69,3 @@ GitLab Releases: https://git.uwaterloo.ca/b3lam/cs346-group-7/-/releases
 - [ERD Diagram](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/ERD-Diagram)
 - [Class Diagrams](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Class-Diagrams)
 
-## Grading Instructions
-Use either of these users to log in:
-
-- username: `Kevin`, password: `12345678`
-- username: `Steven`, password: `123`
