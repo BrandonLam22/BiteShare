@@ -26,16 +26,13 @@ choose a spot together.
 
 <img src="docs/screenshots/01-Home.png" height="600">
 
-<img src="docs/screenshots/02-Review.png" width="300" height="600">
+<img src="docs/screenshots/02-Review.png" height="600">
 <br>
 <img src="docs/screenshots/03-Pick.png" width="300" height="200">
 
 <img src="docs/screenshots/04-Profile.png" width="300" height="200">
 <br>
-[Home](docs/screenshots/01-Home.png)
-[Review](docs/screenshots/02-Review.png)
-[Pick](docs/screenshots/03-Pick.png)
-[Profile](docs/screenshots/04-Profile.png)
+
 
 ### Video Walkthrough
 [Walkthrough Video](https://www.youtube.com/shorts/On8riUHww5Q)
@@ -55,15 +52,6 @@ Third-party libraries:
 - Coil
 - Logback
 
-### Releases
-GitLab Releases: https://git.uwaterloo.ca/b3lam/cs346-group-7/-/releases
-
-## Project Information
-
-- [Team Contract](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Team-Contract)
-- [Project Proposal](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/CS346-Group-7-Project-Proposal)
-- [Meeting Minutes](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Team-Meetings)
-- [Team Reflections](https://git.uwaterloo.ca/b3lam/cs346-group-7/-/wikis/Team-Reflections)
 
 ## User Guide
 
