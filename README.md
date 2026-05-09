@@ -24,9 +24,9 @@ choose a spot together.
 
 ### Main Window Screenshot
 
-<img src="docs/screenshots/01-Home.png">
+<img src="docs/screenshots/01-Home.png" height="600">
 
-<img src="docs/screenshots/02-Review.png" width="300" height="200">
+<img src="docs/screenshots/02-Review.png" width="300" height="600">
 <br>
 <img src="docs/screenshots/03-Pick.png" width="300" height="200">
 
