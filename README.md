@@ -26,6 +26,12 @@ choose a spot together.
 
 <img src="docs/screenshots/01-Home.png" width="300" height="200">
 <br>
+<img src="docs/screenshots/02-Review.png" width="300" height="200">
+<br>
+<img src="docs/screenshots/03-Pick.png" width="300" height="200">
+<br>
+<img src="docs/screenshots/04-Profile.png" width="300" height="200">
+<br>
 [Home](docs/screenshots/01-Home.png)
 [Review](docs/screenshots/02-Review.png)
 [Pick](docs/screenshots/03-Pick.png)
